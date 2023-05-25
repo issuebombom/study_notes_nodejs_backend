@@ -20,7 +20,7 @@ switch (myNumber) {
 }
 ```
 
-## 연산자 (Math Obejct)
+## 연산자 (Math Object)
 
 > 항목: abs, max, min, sqrt, pow, round, floor, ceil, random 등등
 
