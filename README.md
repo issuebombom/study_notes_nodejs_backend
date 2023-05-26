@@ -17,3 +17,4 @@
 ## 기타
 
 [AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)
+[Express MVC 간략하게 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_mvc_pattern.md)
