@@ -13,29 +13,29 @@
 
 ```javascript
 // Before
-const express = require("express");
-const members = require("./members.js");
+const express = require('express');
+const members = require('./members.js');
 const app = express();
 
-app.get("/api/members/:id", (req, res) => {
+app.get('/api/members/:id', (req, res) => {
   const id = Number(req.params.id);
   const member = members.filter((member) => member.id === id);
   if (member) {
     res.send(member);
   } else {
-    res.status(404).send({ msg: "There is no such member" });
+    res.status(404).send({ msg: 'There is no such member' });
   }
 });
 
 app.listen(3000, () => {
-  console.log("Server is listening...");
+  console.log('Server is listening...');
 });
 ```
 
 하지만 위 방식에서 params를 불러오는 방식에서 두 가지 수정이 필요했다.
 
 ```javascript
-app.get("/api/members/:id", (req, res) => {
+app.get('/api/members/:id', (req, res) => {
   const { id } = req.params;
   const member = members.find((member) => member.id === Number(id));
 });
@@ -50,7 +50,7 @@ find 메서드의 경우 조건에 부합하는 가장 먼저 발견된 결과�
 ### 멤버 리소스를 부서 기준으로 가져오기
 
 ```javascript
-app.get("/api/members", (req, res) => {
+app.get('/api/members', (req, res) => {
   const { team } = req.query;
   if (team) {
     const teamMembers = members.filter((member) => member.team === team);
@@ -70,7 +70,7 @@ app.get("/api/members", (req, res) => {
 ```javascript
 app.use(express.json()); // middleware: 리퀘스트의 라우트 핸들러에 도달하기 전 json에 대한 전처리
 
-app.post("/api/members", (req, res) => {
+app.post('/api/members', (req, res) => {
   const newMember = req.body;
   members.push(newMember);
   res.send(newMember);
@@ -83,7 +83,7 @@ Express에서는 json 타입의 body가 라우트에 들어오기 전 Express의
 ### 멤버 정보 수정하기
 
 ```javascript
-app.put("/api/members/:id", (req, res) => {
+app.put('/api/members/:id', (req, res) => {
   const { id } = req.params;
   const newInfo = req.body;
   const member = members.find((member) => member.id === Number(id));
@@ -93,7 +93,7 @@ app.put("/api/members/:id", (req, res) => {
     });
     res.send(member);
   } else {
-    res.status(404).send({ message: "There is no member with the id" });
+    res.status(404).send({ message: 'There is no member with the id' });
   }
 });
 ```
@@ -112,21 +112,25 @@ Object.entries(newInfo).forEach((pair) => {
 ### 멤버 삭제하기
 
 ```javascript
-app.delete("/api/members/:id", (req, res) => {
+app.delete('/api/members/:id', (req, res) => {
   const { id } = req.params;
   const membersCount = members.length;
   members = members.filter((member) => member.id !== id);
   if (members.length < membersCount) {
-    res.send({ message: "Deleted" });
+    res.send({ message: 'Deleted' });
   } else {
-    res.status(404).send({ message: "There is no member with the id" });
+    res.status(404).send({ message: 'There is no member with the id' });
   }
 });
 ```
 
 현재 members 데이터가 object 형태이므로 id에 해당하지 않는 멤버를 필터링하여 object를 재할당하는 방식으로 멤버 정보를 제거했다.
 
-### nodemon 설치
+## 실시간 코드 반영을 위한 nodemon 설정
+
+nodemon을 사용하면 매 코드 수정 시 서버를 재실행하므로 코드 수정에 따른 서버 on/off를 수동으로 해주지 않아도 되서 편리하다.
+
+### nodemon 설치하기
 
 개발용도로만 쓰기 위해 아래와 같이 설치한다.
 
@@ -147,7 +151,7 @@ npm install nodemon --save-dev
 npx nodemon app.js
 ```
 
-### package scripts 수정을 통해 간단하게 시작하기
+### package scripts 수정을 통해 단축 명령 설정하기
 
 ```json
 "scripts": {
@@ -186,3 +190,141 @@ npm run dev
 ```
 
 왜냐하면 `start`와 같은 키워드는 run이 없어도 되도록 후보 명령어로서 미리 설정이 되어있지만 그 외 단어에 대해서는 그렇지 않기 때문에 `run`을 추가로 입력해야 한다.
+
+## MYSQL 데이터베이스 활용과 ORM
+
+### 기본 환경 설정하기
+
+node에서 MySQL 데이터베이스를 사용하기 위해 Community Server 설치가 필요하다.  
+https://dev.mysql.com/downloads/
+
+또한 node와 데이터베이스를 ORM 방식으로 사용하기 위해 추가적인 npm 패키지 설치가 필요하다.
+
+```zsh
+npm install mysql2 sequelize sequelize-cli
+```
+
+위 패키지 중 `sequelize-cli`는 필수 패키지는 아니나 데이터베이스 생성이나 마이그레이션 등을 cli 명령으로 가능하게 하여 작업의 편의성을 더해준다.
+
+> 💡 `Tip`  
+> `ORM`은 데이터베이스에 있는 객체를 하나의 객체에 매핑시키는 기술  
+> 데이터베이스 문법을 잘 모르더라도 자바스크립트 언어로 비교적 쉽게 상호작용을 하기 위해 사용된다.
+
+이제 ORM 환경 설정을 위해 데이터베이스 환경 초기화를 한다.
+
+```zsh
+npx sequelize init
+```
+
+위 명령을 수행하면 ORM 동작 환경을 위한 폴더 및 파일이 자동으로 생성된다.
+
+이제 데이터베이스 환경을 설정해준다.
+
+```json
+{
+  "development": {
+    "username": "root",
+    "password": null,
+    "database": "database_development",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "database_production",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  }
+}
+```
+
+config.json 파일을 보면 `development`, `test`, `production` 이렇게 세 가지로 데이터베이스를 구분해서 관리할 수 있게금 설정이 준비되어 있다. 개발 단계에서 사용하는 데이터베이스와 서비스 단계에서 사용하는 데이터베이스의 구분을 위함이다.
+
+우선 개발 단계에 있으므로 development의 값을 수정해 준다.
+
+먼저 MySQL Community Server 설치 시 지정해줬던 username과 password를 입력해준다. username의 경우 특별한 설정을 하지 않았다면 'root'로 지정된다.  
+그리고 database의 이름을 설정해 준다. 현재 'database_development'라고 입력된 내용 대신 사용할 데이터베이스 이름을 정해주면 된다.
+
+이후 아래 명령어를 실행하여 데이터베이스를 생성한다.
+
+```zsh
+npx sequelize db:create --env development
+```
+
+> 💡 `Tip`  
+> `npx`는 패키지에 내장된 명령을 실행하기 위해 사용하는 키워드
+
+참고로 `--env development` 옵션은 development용으로 사용할 것을 지정하는 옵션이다. 해당 옵션은 디폴트값에 해당하므로 사실 개발용 DB 생성 시에는 옵션을 주지 않아도 된다.
+
+### 마이그레이션 생성하기
+
+데이터베이스 생성 후에는 테이블 생성을 진행한다. 사실 순수 MySQL 문법을 사용한다면 테이블 생성 또한 MySQL 문법을 입력하여 생성해야 한다.  
+하지만 ORM 방식을 채택한다면 `마이그레이션` 생성을 거쳐 테이블의 변동사항을 적용하고 logging할 수 있다.
+
+ORM에서의 마이그레이션 생성은 sequelize-cli 명령으로 수행한다.
+
+```zsh
+npx sequelize model:generate --name Member --attributes name:string,team:string,position:string,emailAddress:string,phoneNumber:string,admissionDate:date,birthday:date,profileImage:string
+```
+
+위 명령을 해석하면 아래와 같다.
+
+- model을 생성하는데 이름을 'Member'로 설정한다.
+- 모델에 포함시킬 속성은 속성명:타입으로 설정한다.
+
+서버 API에서는 `모델`이 곧 `테이블`을 의미하고, `속성`이 곧 `테이블의 컬럼명`을 뜻한다.  
+간단하게 정리하자면 테이블을 생성했고, 그 안의 컬럼명을 지어줬는데 각 컬럼에 담을 데이터타입도 함께 지정해줬다.
+
+### 마이그레이션 생성 결과 및 추가 작업
+
+위 명령을 수행하면 `models` 폴더에 index.js와 members.js 파일이 생성된 것과 `migrations` 폴더에 마이그레이션이 생성된 것을 확인할 수 있다. 특히 members.js파일을 보면 내가 설정한 테이블 양식이 클래스와 프로퍼티 형태로 정리된 것을 알 수 있다.
+
+또한 마이그레이션 파일을 확인해 보면 `우리가 정의하지 않았던 "id" ,"createdAt", "updatedAt" 속성이 자동으로 추가된 것을 확인할 수 있다.` 이 속성들은 테이블에서 반드시 필요한 속성이므로 항상 자동으로 생성해준다.  
+이 중 createdAt과 updatedAt 속성에는 아래 프로퍼티를 추가해주면 좋다.
+
+```javascript
+defaultValue: Sequelize.fn('now');
+```
+
+이는 업로드 및 수정 시각을 자동적으로 데이터가 반영되는 현재 시각으로 등록되도록 하기 위함이다.
+
+아래 명령을 통해 해당 마이그레이션을 `migrate`하면 비로소 MySQL 데이터베이스에 테이블이 생성된다.
+
+```zsh
+npx sequelize db:migrate
+```
+
+다시 한 번 정리하자면  
+ORM 방식에서는 테이블 생성을 위해 테이블을 정의해주면 이에 맞는 마이그레이션과 js파일을 생성해주고, 마이그레이션 파일을 대상으로 migrate 명령을 수행하면 그제서야 데이터베이스에 테이블이 생성된다.
+
+ORM 방식은 항상 이러한 형태로 테이블을 관리한다. Django 프레임워크의 ORM도 이와 동일하며 이번 예시는 sequelize라는 ORM을 적용했다고 이해하면 된다. 각 ORM 간 명령어는 다를지라도 작동 방식에 큰 차이는 없다.
+
+> 💡 `Tip`  
+> sequelize의 재밌는 점은 모델명을 'Member'라고 설정했음에도 복수 형태인 'Members'로 생성해 준다는 점이다.
+
+### 테이블 삭제 기능
+
+최종적으로 진행한 migrate를 `UNDO` 명령을 통해 실행을 되돌리는 방식으로 삭제가 가능하다.
+
+```zsh
+npx sequelize db:migrate:undo
+```
+
+### 테이블의 기본 데이터 타입 정의
+
+기본적으로 사용되는 데이터타입 중에서 ORM방식의 타입 지정이 실제 데이터베이스에서 어떠한 타입을 지정하는 것과 같은지 확인한다.
+
+| sequelize-ORM     | DATABASE     |
+| ----------------- | ------------ |
+| Sequelize.STRING  | VARCHAR(255) |
+| Sequelize.INTEGER | INTEGER      |
+| Sequelize.FLOAT   | FLOAT        |
+| Sequelize.DATE    | DATETIME     |
