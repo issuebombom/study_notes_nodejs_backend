@@ -1,6 +1,6 @@
 # MVC 패턴에 대한 이해
 
-![mvc example](./img/mvc_example.png)
+![mvc example](./img/mvc_example.png)  
 소스 코드를 MVC(Model-View-Controller) 패턴으로 관리함으로써 코드 관리의 효율성을 높인다.
 Model: 데이터와 비즈니스 로직을 관리  
 View: 레이아웃과 화면 처리  
