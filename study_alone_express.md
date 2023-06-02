@@ -280,7 +280,7 @@ npx sequelize model:generate --name Member --attributes name:string,team:string,
 - model을 생성하는데 이름을 'Member'로 설정한다.
 - 모델에 포함시킬 속성은 속성명:타입으로 설정한다.
 
-서버 API에서는 `모델`이 곧 `테이블`을 의미하고, `속성`이 곧 `테이블의 컬럼명`을 뜻한다.  
+서버 API에서는 `모델`이 곧 DB의 `테이블`과 연동되는 클래스를 의미하고, 모델의 `프로퍼티`가 곧 `테이블의 컬럼(속성)`을 뜻한다.  
 간단하게 정리하자면 테이블을 생성했고, 그 안의 컬럼명을 지어줬는데 각 컬럼에 담을 데이터타입도 함께 지정해줬다.
 
 ### 마이그레이션 생성 결과 및 추가 작업
@@ -328,3 +328,272 @@ npx sequelize db:migrate:undo
 | Sequelize.INTEGER | INTEGER      |
 | Sequelize.FLOAT   | FLOAT        |
 | Sequelize.DATE    | DATETIME     |
+
+### 데이터베이스에 첫 데이터(seed) 넣기
+데이터베이스와 테이블 정의가 끝났다면 첫 데이터를 입력하는 과정을 seed데이터를 넣는다고 표현한다.  
+이 과정에서는 아래와 같은 순서를 따른다.  
+
+1. sequelize-cli를 통해 시드데이터 추가를 위한 파일을 생성한다. (마이그레이션 틀을 만드는 것과 비슷합니다.)
+    ```zsh
+    npx sequelize seed:generate --name initialMembers
+    ```
+    위 명령어 실행을 완료하면 `seeders` 폴더가 생성되고, 그 안에 `initialMembers`이름이 딸린 파일이 생성된 것을 확인할 수 있다.
+2. seed 파일을 살펴보면 아래와 같이 작성 방법이 제공되는데 가이드를 따라서 입력할 데이터를 작성합니다.
+    ```javascript
+    'use strict';
+
+    /** @type {import('sequelize-cli').Migration} */
+    module.exports = {
+      async up (queryInterface, Sequelize) {
+        /**
+        * Add seed commands here.
+        *
+        * Example:
+        * await queryInterface.bulkInsert('People', [{
+        *   name: 'John Doe',
+        *   isBetaMember: false
+        * }], {});
+        */
+      },
+
+      async down (queryInterface, Sequelize) {
+        /**
+        * Add commands to revert seed here.
+        *
+        * Example:
+        * await queryInterface.bulkDelete('People', null, {});
+        */
+      }
+    };
+
+    ```
+    이전에 봤던 migration처럼 up, down 메소드로 구분되어 생성 및 삭제가 가능함을 알 수 있다.  
+    ```javascript
+    await queryInterface.bulkInsert('People', [{
+        name: 'John Doe',
+        isBetaMember: false
+        }], {})
+    ```
+    up 부분을 보면 이와 같은 형식으로 데이터를 입력할 것을 가이드한다. 'People'부분에 실제 테이블명을 넣어주고 해당 프로퍼티를 작성해주면 된다.
+
+3. seed파일을 기준으로 데이터베이스에 데이터를 입력한다.
+    ```zsh
+    npx sequelize db:seed:all
+    ```
+    이 또한 migrate와 동일한 행위에 속하므로 결과에서 migrated되었다는 문구를 확인할 수 있고, 이제 seed데이터가 데이터베이스에 저장되었다.
+
+### 모델과 테이블 연동하기
+생성한 members.js를 보면 테이블에 대한 정의를 볼 수 있다.
+```javascript
+const { Model } = require('sequelize');
+module.exports = (sequelize, DataTypes) => {
+  class Member extends Model {}
+  Member.init(
+    {
+      name: DataTypes.STRING,
+      team: DataTypes.STRING,
+      position: DataTypes.STRING,
+      emailAddress: DataTypes.STRING,
+      phoneNumber: DataTypes.STRING,
+      admissionDate: DataTypes.DATE,
+      birthday: DataTypes.DATE,
+      profileImage: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: 'Member',
+    }
+  );
+  return Member;
+};
+```
+가이드를 위한 주석과 `static associate(models){}` 부분을 우선 제외하면 위 코드가 남게 된다.  
+테이블의 정의를 보면 primary key에 대한 정보가 담겨있지 않은데, 보통 id는 자동 생성되는 영역이므로 이 곳에 정의되지 않는게 일반적이다. 하지만 현재 실습 중인 예시의 경우 members 데이터에 이미 id속성이 존재하고, 이를 primaary key로 사용할 예정이므로 아래와 같이 수정해준다. 아래 과정이 없다면 primary key id와 member의 id가 이중으로 생성될 것이며 member의 id는 사실상 무의미한 데이터가 될 것이다.
+```javascript
+Member.init(
+    {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: DataTypes.INTEGER,
+      },
+      name: DataTypes.STRING,
+      team: DataTypes.STRING,
+      position: DataTypes.STRING,
+      emailAddress: DataTypes.STRING,
+      phoneNumber: DataTypes.STRING,
+      admissionDate: DataTypes.DATE,
+      birthday: DataTypes.DATE,
+      profileImage: DataTypes.STRING,
+    },
+    ...
+)
+```
+위 id 정보는 마이그레이션에서 가져왔으며 type의 `Sequelize.INTEGER` 부분을 `DataTypes.INTEGER`로 바꿔주면 된다. 이렇게 하면 이제 맴버 ID를 primary key로 쓰게되며, 이제는 데이터 입력 시 id값을 입력해줘야 한다.
+
+이제 index.js파일을 통해 app.js와 모델을 연동하기 위한 작업을 진행한다.  
+빠른 이해를 돕기 위해 index.js에 이미 작성된 기존 코드값을 지우고 아래 코드를 작성한다.
+
+```javascript
+const Sequelize = require('sequelize');
+const config = require('../config/config.json');
+
+const { username, password, database, host, dialect } = config.development;
+const sequelize = new Sequelize(database, username, password, {
+  host,
+  dialect,
+});
+
+const Member = require('./member')(sequelize, Sequelize.DataTypes);
+
+
+const db = {};
+db.Member = Member;
+
+module.exports = db;
+```
+
+sequelize와 config.json을 불러온 뒤  
+먼저 config.development에 사전에 적어둔 데이터베이스 관련 정보를 불러옵니다.  
+그리고 나서 Sequelize 객체를 생성하는데 활용하고,  
+Member 객체를 불러옵니다. 이 때 member.js에서 공개된 함수의 실행을 통해 초기 설정을 마무리합니다.  
+이제 db라는 오브젝트로 담아 외부에 공개합니다.  
+
+최종적으로 app.py에 모델을 불러옵니다.  
+이때 신기한 점은 `require에서 models 디렉토리만 선택했지만 자동으로 하위 파일인 index.js을 찾아서 db 오브젝트를 불러 올 수 있다는 점`입니다.
+> 💡 `Tip`  
+index.js파일을 자동으로 찾는 것은 node의 특징입니다.
+
+```javascript
+// app.py
+
+const db = require('./models');
+const { Member } = db;'
+```
+이제 모델과 데이터베이스를 연동하였고, 모델을 통해 데이터베이스를 수정할 수 있게 되었습니다.
+
+### ORM 방식으로 MySQL 데이터베이스에 GET 요청하기
+아래 코드는 전체 데이터와 필터링에 대한 GET 방식을 구현한다.
+
+```javascript
+const express = require('express');
+const app = express();
+const db = require('./models');
+const { Member } = db;
+
+app.use(express.json());
+
+app.get('/api/members', async (req, res) => {
+  const { team } = req.query;
+  if (team) {
+    // const teamMembers = await Member.findAll({ where: { team: team } });
+    const teamMembers = await Member.findAll({ where: { team } }); // 위와 동일
+    res.send(teamMembers);
+  } else {
+    const members = await Member.findAll();
+    res.send(members);
+  }
+});
+
+app.listen(3000, () => {
+  console.log('Server is listening...');
+});
+```
+위 코드에서 데이터베이스를 가져오는 방법과 데이터를 찾는 방법에 주목할 필요가 있다.  
+먼저 위에서도 언급했지만 require를 통해 models 디렉토리를 가져오면 하위파일 중 index.js를 자동으로 가져오게 되고(node.js의 특징), index.js는 db라는 변수를 export하고 있어 결론적으로 db 변수에 담는다.  
+이후 db 안에 담긴 Member라는 객체(테이블)를 가져온 뒤 findAll 메서드로 데이터를 가져온다.
+
+> 💡 `Tip`  
+findAll 메소드의 where에서 {team: team}을 `Shorthand Property Names` 기법을 적용한 것을 볼 수 있다.  
+이를 통해 찾고자 하는 key의 값과 확인할 데이터의 변수명이 동일할 경우 하나로 쓸 수 있다.
+
+### sequelize ORM find의 또다른 기능들
+```javascript
+// 하나만 찾기
+const member = await Member.findOne({ where: { id } });
+res.send(member);
+
+// 기본 정렬
+const members = await Member.findAll({ sort: [['admissionDate', 'DESC'], ['team', 'ASC']] });
+res.send(members);
+
+```
+
+### sequelize ORM find 결과의 실체
+위 예시와 같이 find메소드와 추가 옵션을 덧붙여 받은 결과를 `res.send(members)`로 리스폰하고 있다.  
+여기서 만약 members를 console.log()로 출력해서 확인할 경우 단순 오브젝트 형태의 정보가 아니라는 점을 확인할 수 있다.
+```javascript
+// members의 실제 결과
+
+Member {
+  dataValues: {
+    id: 1,
+    name: 'Alex',
+    team: 'engineering',
+    position: 'Server Developer',
+    emailAddress: 'alex@google.com',
+    phoneNumber: '010-xxxx-xxxx',
+    admissionDate: 2018-12-10T00:00:00.000Z,
+    birthday: 1994-11-08T00:00:00.000Z,
+    profileImage: 'profile1.png',
+    createdAt: 2023-06-02T02:42:07.000Z,
+    updatedAt: 2023-06-02T02:42:07.000Z
+  },
+  _previousDataValues: {
+    id: 1,
+    name: 'Alex',
+    team: 'engineering',
+    position: 'Server Developer',
+    emailAddress: 'alex@google.com',
+    phoneNumber: '010-xxxx-xxxx',
+    admissionDate: 2018-12-10T00:00:00.000Z,
+    birthday: 1994-11-08T00:00:00.000Z,
+    profileImage: 'profile1.png',
+    createdAt: 2023-06-02T02:42:07.000Z,
+    updatedAt: 2023-06-02T02:42:07.000Z
+  },
+  uniqno: 1,
+  _changed: Set(0) {},
+  _options: {
+    isNewRecord: false,
+    _schema: null,
+    _schemaDelimiter: '',
+    raw: true,
+    attributes: [
+      'id',            'name',
+      'team',          'position',
+      'emailAddress',  'phoneNumber',
+      'admissionDate', 'birthday',
+      'profileImage',  'createdAt',
+      'updatedAt'
+    ]
+  },
+  isNewRecord: false
+}
+```
+원래 members 변수는 위 결과처럼 하나의 객체 형태를 response한다. 여기서 실제 우리가 필요한 데이터는 `dataValues` 프로퍼티이다.  
+그럼에도 우리가 `dataValues` 프로퍼티에 직접적으로 접근하지 않고서도 원하는 결과를 얻을 수 있었던 이유는 바로 `send` 메서드가 이를 자동으로 처리해줬기 때문이다.  
+자동 처리된 과정은 바로 `.toJSON()` 메서드를 적용하는 것으로, 이는 Member 클래스에서 dataValues 객체를 가져오는 역할을 하는데 만약 `send` 메서드로 모델 클래스를 보내준다면 이 과정의 생략이 가능하다.
+
+### 데이터 추가를 위한 POST 요청
+이전 예시들을 통해 ORM 메서드에 대한 설명이 충분했으므로 코드만 보고 파악해보자
+```javascript
+app.post('/api/members', async (req, res) => {
+  const newMember = req.body;
+  const member = Member.build(newMember);
+  await member.save()
+  res.send(member)
+})
+```
+빌드 후 저장 방식으로 새 데이터를 추가하는 것을 확인할 수 있다.
+
+```javascript
+app.post('/api/members', async (req, res) => {
+  const newMember = req.body;
+  const member = await Member.create(newMember);
+  res.send(member);
+});
+```
+build와 save 메서드를 합친 `create` 메서드를 써도 동일한 결과를 얻을 수 있다.  
+하지만 만약에 빌드 후 수정이 필요한 상황이라면 build, save로 구분하서 쓰면 된다.
