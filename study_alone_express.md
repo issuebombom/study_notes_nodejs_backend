@@ -597,3 +597,54 @@ app.post('/api/members', async (req, res) => {
 ```
 build와 save 메서드를 합친 `create` 메서드를 써도 동일한 결과를 얻을 수 있다.  
 하지만 만약에 빌드 후 수정이 필요한 상황이라면 build, save로 구분하서 쓰면 된다.
+
+### 데이터 수정을 위한 PUT 요청
+sequealize의 update 결과로 [수정된 row의 개수, 수정된 row의 data]가 반환된다. 공식 문서에 따르면 결과 배열의 두번째 요소는 postgreSQL에서만 지원한다고 한다.  
+어쨌든 `result[0]`은 수정 성공 개수를 의미하므로 아래와 같이 활용한다.
+
+```javascript
+app.put('/api/members/:id', async (req, res) => {
+  const id = req.params.id;
+  const newInfo = req.body;
+  const result = await Member.update(newInfo, { where: { id } });
+  if (result[0]) {
+    res.send({ message: `${result[0]} row(s) is affected` });
+  } else {
+    res.status(404).send({ message: 'There is no member with id' });
+  }
+});
+```
+참고로 변경할 사항 즉 req.body에 보낼 json 데이터에는 모든 컬럼이 아닌 변경할 컬럼과 값만 지정해줘도 된다.
+
+```javascript
+// 또 다른 수정 방법
+app.put('/api/members/:id', async (req, res) => {
+  const id = req.params.id;
+  const newInfo = req.body;
+  const member = await Member.findOne({ where: { id } });
+  if (member) {
+    Object.keys(newInfo).forEach((prop) => {
+      member[prop] = newInfo[prop];
+    });
+    await member.save();
+    res.send(member);
+  } else {
+    res.status(404).send({ message: 'There is no member with id' });
+  }
+});
+```
+또 다른 수정 방법으로는 위 코드와 같이 수정하고자 하는 데이터를 `findOne`메소드를 불러와 직접적으로 수정한 뒤 다시 저장하는 방법을 취할 수도 있다.
+
+### 데이터 삭제를 위한 DELETE 요청
+DELETE의 기능으로 `destroy`메서드를 사용하고 있으며, 데이터 삭제의 결과로 삭제된 row의 수를 출력하여 `update`메서드와 같이 성공 유무의 기준으로 사용하고 있다.
+```javascript
+app.delete('/api/member/:id', async (req, res) => {
+  const id = req.params.id;
+  const deletedCount = Member.destroy({ where: { id } });
+  if (deletedCount) {
+    res.send({ message: `${deletedCount} row(s) deleted` });
+  } else {
+    res.status(404).send({ message: 'There is no member with id' });
+  }
+});
+```
