@@ -129,3 +129,95 @@ function authMiddleware(req, res, next) {
 > 서버에서는 auth가 있는지 먼저 확인한다. auth가 있다면 jwt 검증을 통해 토큰의 일치여부를 판단한다.  
 > 일치 여부에 따라 요청에 응답하거나 거부한다.  
 > 위 코드에는 없지만 만약 유저의 권한에 따라 허용 또는 불허하는 과정이 있다면 미들웨어를 추가해서 user정보의 권한(등급)에 따른 검증 절차를 추가한다.
+
+## Refresh Token
+### What is Refresh Token?
+로그인 후 생성된 토큰을 사실 `Access Token`이라 부른다. 실제로는 Access Token에 대하여 유효기간을 지정해서 사용해야 한다. 그 이유는 해커와 같은 제 3자에게 악의적인 용도로 Token이 탈취된다면 유저가 재로그인을 한다 해도 기존에 생성된 토큰이 유효하기 때문에 보완상 위험에 처하게 되기 때문이다.  
+하지만 만약 Access Token의 유효기간이 매우 짧게 설정되어 있다면 유저는 매번 재로그인을 시도해야 하고, 반대로 너무 길게 설정되어 있다면 보완상 의미가 없어진다.  
+금융 관련 서비스 이용 시에는 유저가 번거롭더라도 유효기간을 짧게 하는 것이 타당할 수 있지만 그 외의 경우에는 적절한 타협점을 찾아야 하는 어려움이 있는데 이를 위한 해결책으로 `Refresh Token`이 나왔다.  
+
+### Refresh Token의 용도
+`Refresh Token`은 기존에 클라이언트가 가지고 있던 Access Token이 만료될 경우 재발급 받기위한 용도로 사용한다. 그래서 Access Token의 유효기간은 짧게, Refresh Token은 길게 설정한다.
+
+### 토큰에 대한 클라이언트 서버의 Flow
+[기존에 정리한 인증 절차의 흐름](#인증-및-인가-절차-기본-흐름)에서 달라진 점은 아래와 같다.  
+- 최초 서버에서 엑세스 토큰과 리프레시 토큰을 함께 발급하여 클라이언트에 전달한다.
+- 서버에서 리프레시 토큰은 주로 DB에 보관한다.
+- 클라이언트에서 보낸 엑세스 토큰이 만료된 경우 서버에서는 'invalid token error'를 응답하고, 이 때 클라이언트는 리프레시 토큰을 보낸다.  
+- 서버에서 리프레시 토큰이 검증되면 새로운 엑세스 토큰을 재발행하여 클라이언트에 함께 전달한다.
+
+> 📌 Authorization Flow  
+> ![auth_flow_example](./img/auth_flow_exam.png)
+
+### 로그인 시 Access, Refresh 토큰 생성 API 
+```javascript
+// 임시 DB
+let refreshTokens = [];
+
+// 로그인 POST 요청
+app.post('/login', (req, res) => {
+  const username = req.body.username;
+  const user = { username };
+
+  // 토큰 생성 시 유효기간 추가
+  const accessToken = jwt.sign(user, secretText, 
+    { expiresIn: '15s' });
+  const refreshToken = jwt.sign(user, refreshSecretText, 
+    { expiresIn: '1d' });
+
+  // 리프레시 토큰 DB에 저장
+  refreshTokens.push(refreshToken);
+
+  // 리프레시 토큰 쿠키에 넣어주기 (쿠키 이름: jwt로 설정)
+  res.cookie('jwt', refreshToken, {
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 만료 기간 설정 (밀리세컨 단위)
+  });
+
+  res.json({ accessToken });
+});
+```
+[이전에 작성한 코드](#토큰-생성-api-구현)와 비교했을 때 차이점은 
+1. 리프레시 토큰 생성 및 DB에 저장 (DB는 배열로 임시 구현)
+2. 두 개의 토큰 모드 유효기간 설정
+3. 쿠키에 리프레시 토큰을 담아서 전달 (httpOnly 옵션, 쿠키 유효기간 설정)
+
+> 💡 `HttpOnly?`  
+> 이 옵션을 설정할 경우 자바스크립트 명령을 통해 쿠키를 가져올 수 없도록 하여 해킹 툴과 같은 악성 도구로 부터 쿠키 수집에 대한 방어를 할 수 있다.
+
+### 리프레시 토큰 생성 API
+```javascript
+const cookieParser = require('cookie-parser');
+app.use(cookieParser())
+
+// 리프레시 토큰
+app.get('/refresh', (req, res) => {
+  // cookies안에 jwt라는 이름의 쿠키가 있는지 확인
+  const cookies = req.cookies; // cookie-parser 모듈이 설치되었기 때문에 리턴 가능
+  if (!cookies?.jwt) return res.sendStatus(403);
+
+  const refreshToken = cookies.jwt; // jwt 쿠키를 토큰으로 선언
+  // DB에 저장된 쿠키와 일치하는지 검증
+  if (!refreshTokens.includes(refreshToken)) return res.sendStatus(403);
+
+  jwt.verify(refreshToken, refreshSecretText, (err, user) => {
+    // 토큰 검증
+    if (err) return res.sendStatus(403);
+
+    // accessToken 생성
+    const accessToken = jwt.sign({ username: user.username },
+      secretText,
+      { expiresIn: '15s' }
+    );
+    // 엑세스토큰 전달
+    res.json({ accessToken });
+  });
+});
+```
+GET 메서드의 Response를 받으면 쿠키가 자동으로 함께 전달된다. 그러므로 특별한 요청 없이 바로 `res.cookies` 명령을 통해 쿠키값들을 오브젝트로 가져올 수 있다. 하지만 `npm install cookie-parser`를 통해 cookieParser를 설치하여 require 및 미들웨어 등록을 해야 정상적으로 값을 얻을 수 있게 된다. 위 모듈이 없을 경우 undefined를 받게 된다.
+
+위 코드의 work flow는 아래와 같다.
+1. jwt라는 키값으로 저장된 쿠키가 있는지 검증한다.
+2. DB에 저장된 리프레시 토큰이 쿠키에 저장된 토큰과 같은지 검증한다.
+3. 검증을 통과하면 리프레시 토큰에 담았던 유저 정보(`user`)에서 username 부분을 토대로 엑세스 토큰을 재발생한 뒤 프론트에 전달한다.
+
