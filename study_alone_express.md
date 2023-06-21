@@ -330,22 +330,24 @@ npx sequelize db:migrate:undo
 | Sequelize.DATE    | DATETIME     |
 
 ### 데이터베이스에 첫 데이터(seed) 넣기
+
 데이터베이스와 테이블 정의가 끝났다면 첫 데이터를 입력하는 과정을 seed데이터를 넣는다고 표현한다.  
-이 과정에서는 아래와 같은 순서를 따른다.  
+이 과정에서는 아래와 같은 순서를 따른다.
 
 1. sequelize-cli를 통해 시드데이터 추가를 위한 파일을 생성한다. (마이그레이션 틀을 만드는 것과 비슷합니다.)
-    ```zsh
-    npx sequelize seed:generate --name initialMembers
-    ```
-    위 명령어 실행을 완료하면 `seeders` 폴더가 생성되고, 그 안에 `initialMembers`이름이 딸린 파일이 생성된 것을 확인할 수 있다.
+   ```zsh
+   npx sequelize seed:generate --name initialMembers
+   ```
+   위 명령어 실행을 완료하면 `seeders` 폴더가 생성되고, 그 안에 `initialMembers`이름이 딸린 파일이 생성된 것을 확인할 수 있다.
 2. seed 파일을 살펴보면 아래와 같이 작성 방법이 제공되는데 가이드를 따라서 입력할 데이터를 작성합니다.
-    ```javascript
-    'use strict';
 
-    /** @type {import('sequelize-cli').Migration} */
-    module.exports = {
-      async up (queryInterface, Sequelize) {
-        /**
+   ```javascript
+   'use strict';
+
+   /** @type {import('sequelize-cli').Migration} */
+   module.exports = {
+     async up(queryInterface, Sequelize) {
+       /**
         * Add seed commands here.
         *
         * Example:
@@ -354,36 +356,46 @@ npx sequelize db:migrate:undo
         *   isBetaMember: false
         * }], {});
         */
-      },
+     },
 
-      async down (queryInterface, Sequelize) {
-        /**
+     async down(queryInterface, Sequelize) {
+       /**
         * Add commands to revert seed here.
         *
         * Example:
         * await queryInterface.bulkDelete('People', null, {});
         */
-      }
-    };
+     },
+   };
+   ```
 
-    ```
-    이전에 봤던 migration처럼 up, down 메소드로 구분되어 생성 및 삭제가 가능함을 알 수 있다.  
-    ```javascript
-    await queryInterface.bulkInsert('People', [{
-        name: 'John Doe',
-        isBetaMember: false
-        }], {})
-    ```
-    up 부분을 보면 이와 같은 형식으로 데이터를 입력할 것을 가이드한다. 'People'부분에 실제 테이블명을 넣어주고 해당 프로퍼티를 작성해주면 된다.
+   이전에 봤던 migration처럼 up, down 메소드로 구분되어 생성 및 삭제가 가능함을 알 수 있다.
+
+   ```javascript
+   await queryInterface.bulkInsert(
+     'People',
+     [
+       {
+         name: 'John Doe',
+         isBetaMember: false,
+       },
+     ],
+     {}
+   );
+   ```
+
+   up 부분을 보면 이와 같은 형식으로 데이터를 입력할 것을 가이드한다. 'People'부분에 실제 테이블명을 넣어주고 해당 프로퍼티를 작성해주면 된다.
 
 3. seed파일을 기준으로 데이터베이스에 데이터를 입력한다.
-    ```zsh
-    npx sequelize db:seed:all
-    ```
-    이 또한 migrate와 동일한 행위에 속하므로 결과에서 migrated되었다는 문구를 확인할 수 있고, 이제 seed데이터가 데이터베이스에 저장되었다.
+   ```zsh
+   npx sequelize db:seed:all
+   ```
+   이 또한 migrate와 동일한 행위에 속하므로 결과에서 migrated되었다는 문구를 확인할 수 있고, 이제 seed데이터가 데이터베이스에 저장되었다.
 
 ### 모델과 테이블 연동하기
+
 생성한 members.js를 보면 테이블에 대한 정의를 볼 수 있다.
+
 ```javascript
 const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
@@ -407,8 +419,10 @@ module.exports = (sequelize, DataTypes) => {
   return Member;
 };
 ```
-가이드를 위한 주석과 `static associate(models){}` 부분을 우선 제외하면 위 코드가 남게 된다.  
-테이블의 정의를 보면 primary key에 대한 정보가 담겨있지 않은데, 보통 id는 자동 생성되는 영역이므로 이 곳에 정의되지 않는게 일반적이다. 하지만 현재 실습 중인 예시의 경우 members 데이터에 이미 id속성이 존재하고, 이를 primaary key로 사용할 예정이므로 아래와 같이 수정해준다. 아래 과정이 없다면 primary key id와 member의 id가 이중으로 생성될 것이며 member의 id는 사실상 무의미한 데이터가 될 것이다.
+
+가이드를 위한 주석과 `static associate(models){}` 부분을 우선 제외하면(나중에 테이블간 관계 설정 시 사용) 위 코드가 남게 된다.  
+테이블의 정의를 보면 primary key에 대한 정보가 담겨있지 않은데, 보통 id는 자동 생성되는 영역이므로 이 곳에 정의되지 않는게 일반적이다. 하지만 현재 실습 중인 예시의 경우 members 데이터에 이미 id속성이 존재하고, 이를 primary key로 사용하면서 신규 맴버 생성 시 id값을 input할 예정이므로 아래와 같이 추가해준다.
+
 ```javascript
 Member.init(
     {
@@ -430,7 +444,54 @@ Member.init(
     ...
 )
 ```
+
 위 id 정보는 마이그레이션에서 가져왔으며 type의 `Sequelize.INTEGER` 부분을 `DataTypes.INTEGER`로 바꿔주면 된다. 이렇게 하면 이제 맴버 ID를 primary key로 쓰게되며, 이제는 데이터 입력 시 id값을 입력해줘야 한다.
+
+이 밖에도 만약 name, team 등 migrate 파일에서 특정 필드를 대상으로 validation 등 기능을 추가 설정한 뒤 migrate했다면 모델에도 그대로 반영해주자. 아래 예시를 통해 확인해보자
+
+```javascript
+// migrate js파일
+username: {
+  type: Sequelize.STRING(20),
+  allowNull: false,
+  unique: true,
+  validate: {
+    len: {
+      args: [3, 20],
+      msg: '최소 3자 이상 입력해야 합니다.',
+    },
+    is: {
+      args: /^[a-zA-Z0-9]+$/,
+      msg: '영문 대소문자, 숫자만 입력이 가능합니다.',
+    },
+  },
+},
+```
+
+위 예시처럼 유저 네임 생성 시 입력 제한을 설정했다면 해당 코드를 그대로 복사해서 models 폴더 내 user.js 모델에도 똑같이 적용해주자
+
+```javascript
+User.init({
+  username: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    unique: true,
+    validate: {
+      len: {
+        args: [3, 20],
+        msg: '닉네임을 최소 3자 이상 입력해 주세요.',
+      },
+      is: {
+        args: /^[a-zA-Z0-9]+$/,
+        msg: '닉네임은 영문 대소문자, 숫자만 입력해 주세요.',
+      },
+    },
+  },
+});
+```
+
+User.init에 기존에 있던 필드 내용을 덮어쓰기 한다. 그리고 `Sequelize.STRING(20),`을 `DataTypes.STRING(20),`으로 변경해주자  
+그 외에도 만약 `Sequelize.fn('now'),` 코드가 있다면 `DataTypes.NOW`로 변경해줘야 한다. 이처럼 부분 수정이 필요하다는 사실을 기억하자
 
 이제 index.js파일을 통해 app.js와 모델을 연동하기 위한 작업을 진행한다.  
 빠른 이해를 돕기 위해 index.js에 이미 작성된 기존 코드값을 지우고 아래 코드를 작성한다.
@@ -447,7 +508,6 @@ const sequelize = new Sequelize(database, username, password, {
 
 const Member = require('./member')(sequelize, Sequelize.DataTypes);
 
-
 const db = {};
 db.Member = Member;
 
@@ -458,12 +518,13 @@ sequelize와 config.json을 불러온 뒤
 먼저 config.development에 사전에 적어둔 데이터베이스 관련 정보를 불러옵니다.  
 그리고 나서 Sequelize 객체를 생성하는데 활용하고,  
 Member 객체를 불러옵니다. 이 때 member.js에서 공개된 함수의 실행을 통해 초기 설정을 마무리합니다.  
-이제 db라는 오브젝트로 담아 외부에 공개합니다.  
+이제 db라는 오브젝트로 담아 외부에 공개합니다.
 
 최종적으로 app.py에 모델을 불러옵니다.  
 이때 신기한 점은 `require에서 models 디렉토리만 선택했지만 자동으로 하위 파일인 index.js을 찾아서 db 오브젝트를 불러 올 수 있다는 점`입니다.
+
 > 💡 `Tip`  
-index.js파일을 자동으로 찾는 것은 node의 특징입니다.
+> index.js파일을 자동으로 찾는 것은 node의 특징입니다.
 
 ```javascript
 // app.py
@@ -471,9 +532,11 @@ index.js파일을 자동으로 찾는 것은 node의 특징입니다.
 const db = require('./models');
 const { Member } = db;'
 ```
+
 이제 모델과 데이터베이스를 연동하였고, 모델을 통해 데이터베이스를 수정할 수 있게 되었습니다.
 
 ### ORM 방식으로 MySQL 데이터베이스에 GET 요청하기
+
 아래 코드는 전체 데이터와 필터링에 대한 GET 방식을 구현한다.
 
 ```javascript
@@ -500,29 +563,37 @@ app.listen(3000, () => {
   console.log('Server is listening...');
 });
 ```
+
 위 코드에서 데이터베이스를 가져오는 방법과 데이터를 찾는 방법에 주목할 필요가 있다.  
 먼저 위에서도 언급했지만 require를 통해 models 디렉토리를 가져오면 하위파일 중 index.js를 자동으로 가져오게 되고(node.js의 특징), index.js는 db라는 변수를 export하고 있어 결론적으로 db 변수에 담는다.  
 이후 db 안에 담긴 Member라는 객체(테이블)를 가져온 뒤 findAll 메서드로 데이터를 가져온다.
 
 > 💡 `Tip`  
-findAll 메소드의 where에서 {team: team}을 `Shorthand Property Names` 기법을 적용한 것을 볼 수 있다.  
-이를 통해 찾고자 하는 key의 값과 확인할 데이터의 변수명이 동일할 경우 하나로 쓸 수 있다.
+> findAll 메소드의 where에서 {team: team}을 `Shorthand Property Names` 기법을 적용한 것을 볼 수 있다.  
+> 이를 통해 찾고자 하는 key의 값과 확인할 데이터의 변수명이 동일할 경우 하나로 쓸 수 있다.
 
 ### sequelize ORM find의 또다른 기능들
+
 ```javascript
 // 하나만 찾기
 const member = await Member.findOne({ where: { id } });
 res.send(member);
 
 // 기본 정렬
-const members = await Member.findAll({ sort: [['admissionDate', 'DESC'], ['team', 'ASC']] });
+const members = await Member.findAll({
+  order: [
+    ['admissionDate', 'DESC'],
+    ['team', 'ASC'],
+  ],
+});
 res.send(members);
-
 ```
 
 ### sequelize ORM find 결과의 실체
+
 위 예시와 같이 find메소드와 추가 옵션을 덧붙여 받은 결과를 `res.send(members)`로 리스폰하고 있다.  
 여기서 만약 members를 console.log()로 출력해서 확인할 경우 단순 오브젝트 형태의 정보가 아니라는 점을 확인할 수 있다.
+
 ```javascript
 // members의 실제 결과
 
@@ -572,20 +643,24 @@ Member {
   isNewRecord: false
 }
 ```
+
 원래 members 변수는 위 결과처럼 하나의 객체 형태를 response한다. 여기서 실제 우리가 필요한 데이터는 `dataValues` 프로퍼티이다.  
 그럼에도 우리가 `dataValues` 프로퍼티에 직접적으로 접근하지 않고서도 원하는 결과를 얻을 수 있었던 이유는 바로 `send` 메서드가 이를 자동으로 처리해줬기 때문이다.  
 자동 처리된 과정은 바로 `.toJSON()` 메서드를 적용하는 것으로, 이는 Member 클래스에서 dataValues 객체를 가져오는 역할을 하는데 만약 `send` 메서드로 모델 클래스를 보내준다면 이 과정의 생략이 가능하다.
 
 ### 데이터 추가를 위한 POST 요청
+
 이전 예시들을 통해 ORM 메서드에 대한 설명이 충분했으므로 코드만 보고 파악해보자
+
 ```javascript
 app.post('/api/members', async (req, res) => {
   const newMember = req.body;
   const member = Member.build(newMember);
-  await member.save()
-  res.send(member)
-})
+  await member.save();
+  res.send(member);
+});
 ```
+
 빌드 후 저장 방식으로 새 데이터를 추가하는 것을 확인할 수 있다.
 
 ```javascript
@@ -595,10 +670,12 @@ app.post('/api/members', async (req, res) => {
   res.send(member);
 });
 ```
+
 build와 save 메서드를 합친 `create` 메서드를 써도 동일한 결과를 얻을 수 있다.  
 하지만 만약에 빌드 후 수정이 필요한 상황이라면 build, save로 구분하서 쓰면 된다.
 
 ### 데이터 수정을 위한 PUT 요청
+
 sequealize의 update 결과로 [수정된 row의 개수, 수정된 row의 data]가 반환된다. 공식 문서에 따르면 결과 배열의 두번째 요소는 postgreSQL에서만 지원한다고 한다.  
 어쨌든 `result[0]`은 수정 성공 개수를 의미하므로 아래와 같이 활용한다.
 
@@ -614,6 +691,7 @@ app.put('/api/members/:id', async (req, res) => {
   }
 });
 ```
+
 참고로 변경할 사항 즉 req.body에 보낼 json 데이터에는 모든 컬럼이 아닌 변경할 컬럼과 값만 지정해줘도 된다.
 
 ```javascript
@@ -633,10 +711,13 @@ app.put('/api/members/:id', async (req, res) => {
   }
 });
 ```
+
 또 다른 수정 방법으로는 위 코드와 같이 수정하고자 하는 데이터를 `findOne`메소드를 불러와 직접적으로 수정한 뒤 다시 저장하는 방법을 취할 수도 있다.
 
 ### 데이터 삭제를 위한 DELETE 요청
+
 DELETE의 기능으로 `destroy`메서드를 사용하고 있으며, 데이터 삭제의 결과로 삭제된 row의 수를 출력하여 `update`메서드와 같이 성공 유무의 기준으로 사용하고 있다.
+
 ```javascript
 app.delete('/api/member/:id', async (req, res) => {
   const id = req.params.id;
@@ -648,3 +729,62 @@ app.delete('/api/member/:id', async (req, res) => {
   }
 });
 ```
+
+### MySQL의 JOIN 적용을 위한 준비
+
+게시글 작성 사이트를 예시로 들어보자.  
+데이터베이스에는 유저 테이블과 게시글 테이블이 구분되어 있을 것이고, 게시글 테이블을 통해 해당 게시글의 작성자가 누구인지, 좀 더 깊게 들어가서 작성자의 이메일은 무엇인지 알기 위해서는 두 테이블 간 JOIN 작업이 필요할 것이다. sequelize를 통해 두 테이블을 JOIN 해서 정보를 획득하는 방법에 대해 알아보자
+
+#### 두 테이블의 관계 설정
+
+```javascript
+// 유저 모델과 포스트 모델 간 1대 다 관계 설정
+
+// models/user.js
+static associate(models) {
+  this.hasMany(models.Post, {
+    sourceKey: 'id',
+    foreignKey: 'userId',
+  });
+}
+
+// models/post.js
+static associate(models) {
+  this.belongsTo(models.User, {
+    targetKey: 'id',
+    foreignKey: 'userId',
+});
+}
+```
+
+우선 sequelize의 migrate를 통해 생성된 models 파일을 살펴본다.  
+만약 migrate를 통해 User 모델과 Post 모델이 생성되었다고 가정했을 때 각각의 코드에는 `associate`라는 staticmethod가 있을 것이다. 해당 란에 위와 같이 각 모델 파일을 수정해 준다.
+
+위 예시의 경우 유저와 게시글 테이블 간의 관계를 1대 Many로 설정하고 있다. 유저의 입장에서 게시글은 여러 개 작성할 수 있지만 게시글의 입장에서는 본인의 작성자는 단 한명이기 때문이다.
+
+그래서 models/user.js 모델에 `hasMany` 메서드를 적용하여 User의 id와 Post의 userId 필드를 엮어준다.  
+그리고 models/post.js 모델의 경우 1대 다 중 '다'에 해당하므로 해당 케이스는 `belongsTo` 메서드를 통해 위와 같이 코드를 작성해준다.
+
+저렇게하면 이제 sequelize의 CRUD 메서드 사용 시 `include` 메서드를 활용하여 JOIN 쿼리를 간접적으로 날릴 수 있게 된다.
+
+예시를 살펴보자
+
+```javascript
+// sequelize
+const getPosts = async (req, res) => {
+  const getPosts = await Post.findAll({
+    attributes: {
+      exclude: ['userId'],
+    },
+    include: [
+      {
+        model: User,
+        attributes: ['id', 'username', 'role'],
+      },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+};
+```
+
+포스트 정보를 GET 하는 함수에서 findAll을 통해 Post테이블 데이터를 모두 불러오며, 이 과정에서 userId 필드를 제외한다. 그 이유는 이후 include 메서드를 통해 User 모델을 불러와 해당 모델에 담긴 필드를 불러오면서 유저 id를 가져올 것이기 때문이다. (굳이 userId에 대한 정보가 중복되어 reponse될 필요가 없기 때문이다.) 마지막으로 게시글 조회 시 게시일 기준으로 내림차순 정렬이 되도록 설정하였다.
