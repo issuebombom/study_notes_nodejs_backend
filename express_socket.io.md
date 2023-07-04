@@ -236,6 +236,7 @@ socket.on('BUY', (data) => {
   function number2decimals(num) {
     return (Math.round(num * 100) / 100).toFixed(2);
   }
+</script>
 ```
 
 getSelf함수를 통해 받은 유저 정보를 토대로 특정 태그에 value를 적용하고 있어 프론트 영역에 변화를 주는 것 같다.  
