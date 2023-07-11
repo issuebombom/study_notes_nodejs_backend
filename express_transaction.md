@@ -182,4 +182,84 @@ router.post('/users', async (req, res) => {
 ```
 
 위 코드와 같이 두 가지 다른 모델에 데이터를 생성하는 경우 하나의 트랜잭션으로 묶어서 처리하도록 함을 알 수 있다.  
-기억해야할 점은 하나의 트랜잭션으로 묶일 수 있도록 반드시 각 모델 접근 task에 {transaction: t}를 적용해야 한다는 점이다. 
+기억해야할 점은 하나의 트랜잭션으로 묶일 수 있도록 반드시 각 모델 접근 task에 {transaction: t}를 적용해야 한다는 점이다.
+
+## UUID 사용하기
+
+UUID(범용 고유 식별자)는 테이블의 ID로 사용하는 식별자로 총 4개의 하이푼(-)으로 구분된 문자열로 구성되어 있다. 해당 식별자를 사용하는 가장 큰 장점은 전 세계적으로 중복값이 존재할 가능성이 극히 낮다는 점, 즉 고유성이 보장된다는 점 때문이다.
+
+자세한 내용은 생략하고 UUID를 MySQL sequelize에 적용하는 방법에 대해서 살펴보자
+
+```javascript
+// migration
+'use strict';
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('RefreshTokens', {
+      uuid: {
+        allowNull: false,
+        primaryKey: true,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV1,
+      },
+      refreshToken: {
+        type: Sequelize.STRING,
+      },
+      UserId: {
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'Users',
+          key: 'userId',
+        },
+        onDelete: 'CASCADE',
+      },
+    });
+  },
+  async down(queryInterface, Sequelize) {
+    await queryInterface.dropTable('RefreshTokens');
+  },
+};
+```
+
+리프레시 토큰과 유저 id를 보관하는 테이블을 생성한다고 했을 때 먼저 sequelize-cil로 모델을 generate한 뒤 생성된 마이그레이션 파일에서 id 필드의 type와 defaultValue를 위와 같이 변경해준다.  
+defaultValue에서 UUID의 버전을 V1 또는 V4를 설정할 수 있는데 V1을 설정할 경우 UUID 디코딩을 통해 해당 데이터가 생성된 시점을 알 수 있다. 이는 타임스탬프 기반으로 UUID가 생성하기 떄문이다.  
+하지만 V4로 설정할 경우 완전 랜덤값을 기반으로 생성되므로 거의 완벽에 가까운 고유성을 지닌다는 장점이 있지만 어떠한 의미있는 정보를 담지는 않는다.
+
+아래 사이트를 통해 디코더 결과를 확인할 수 있으며 V1과 V4로 설정한 UUID값을 각각 적용해보면 결과가 다른 것을 확인할 수 있다.  
+[UUID 디코더 사이트](https://www.uuidtools.com/decode)
+
+정리하자면 UUIDV1을 사용할 경우 디코딩을 활용한다면 상황에 따라 createdAt과 updatedAt을 사용하지 않아도 되므로 필드의 수를 줄일 수 있는 효과를 볼 수 있다.
+
+```javascript
+// model
+RefreshToken.init(
+  {
+    uuid: {
+      allowNull: false,
+      primaryKey: true,
+      type: Sequelize.UUID,
+      defaultValue: Sequelize.UUIDV4,
+    },
+    refreshToken: {
+      type: DataTypes.STRING,
+    },
+    UserId: {
+      type: DataTypes.INTEGER,
+    },
+  },
+  {
+    sequelize,
+    modelName: 'RefreshToken',
+    timestamps: false,
+  }
+);
+return RefreshToken;
+```
+
+migration 파일과 함께 model 파일도 생성되었을 것인데, 이 부분도 수정이 필요하다. migration 파일과 같이 id 부분의 type과 defaultValue를 설정해주면 되며, createdAt과 updatedAt을 사용하지 않을 경우 `timestamps; false` 설정해 주면 된다.
+
+### UUID는 사용해야 하나?
+고유성도 중요하지만 UUID값은 사실 일반 id와 비교했을 때 차지하는 크기가 다르다. 또한 인덱싱 관련해서도 문제가 될 수 있다. 문자열이며, 길이가 긴 만큼 find 하는데 드는 비용이 숫자에 비해 클 수 밖에 없다.  
+하지만 클러스터 규모로 데이터를 관리하는 같은 분산 처리 시스템에서는 확실한 고유성을 보장한다는 측면에서 충돌이 발생할 가능성이 지극히 낮다는 장점이 있다. 만약 일반 숫자를 id로 사용하고 autoIncrease 되는 형태의 테이블이라면 클러스터 내 다양한 노드들에 분산 저장되어 있는 데이터들이 각 노드를 벗어났을 떄에도 고유성을 지닌다는 보장을 UUID만큼 할 수 없기 때문이다.  
+그러므로 데이터베이스의 규모에 따라 판단할 문제인 것 같다.
