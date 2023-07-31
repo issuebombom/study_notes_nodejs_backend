@@ -16,9 +16,13 @@
 
 ## 기타
 
-[AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)  
+[AWS 기본 서비스 간략하게 살펴보기(작성 중)](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_basic.md)  
+[AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)
+
 [Express MVC 간략하게 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_mvc_pattern.md)  
 [Express JWT로 간단한 인증 기능 구축하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_jwt_module.md)  
 [Express 엑세스/리프레시 토큰 코드 요약](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_access_refresh.md)  
 [Express sequelize로 트랜잭션 적용하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_transaction.md)  
-[Express Socket.io로 서버, 클라이언트 통신하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_socket.io.md)  
+[Express Socket.io로 서버, 클라이언트 통신하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_socket.io.md)
+
+[TypeScript 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_basic.md)
