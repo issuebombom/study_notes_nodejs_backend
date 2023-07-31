@@ -23,7 +23,7 @@
 [Express JWT로 간단한 인증 기능 구축하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_jwt_module.md)  
 [Express 엑세스/리프레시 토큰 코드 요약](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_access_refresh.md)  
 [Express sequelize로 트랜잭션 적용하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_transaction.md)  
-[Express Socket.io로 서버, 클라이언트 통신하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_socket.io.md)
+[Express Socket.io로 서버, 클라이언트 통신하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_socket.io.md)  
 [Express passport로 로그인 인증 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_auth_passport.md)
 
 [TypeScript 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_basic.md)
