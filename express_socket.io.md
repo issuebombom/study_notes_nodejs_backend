@@ -1,6 +1,7 @@
 # Socket.io
 
-Socket.io가 무엇인지, 어떤 기능에 활용되는지 공부합니다.
+Socket.io가 무엇인지, 어떤 기능에 활용되는지 공부합니다.  
+[채팅 기능 구현 예시 확인하기](https://github.com/issuebombom/chat_page_mini)  
 
 ## 시작에 앞서 알아야할 부분
 
