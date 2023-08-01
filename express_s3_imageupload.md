@@ -13,7 +13,7 @@
 
 ### 필요 패키지 설치
 
-```
+```zsh
 npm install aws-sdk
 npm install multer
 npm install multer-s3@2.10.0
@@ -25,7 +25,7 @@ npm install multer-s3@2.10.0
 
 #### 1\. 프론트에서 로컬 이미지를 등록하고 업로드 버튼을 클릭하면 기능 동작이 시작됩니다.
 
-```
+```html
 <body>
   <form id="img-upload-form" enctype="multipart/form-data" onsubmit="return false">
     <input
@@ -68,7 +68,7 @@ formData에 append할 때 이름을 'profileImage'로 설정하고 있습니다.
 
 #### 2\. 버킷에 업로드는 서버 API의 미들웨어로 처리합니다.
 
-```
+```javascript
 // bucket.middleware.js
 const multer = require('multer');
 const multerS3 = require('multer-s3');
@@ -121,7 +121,7 @@ module.exports = UploadBucket;
 
 ---
 
-#### 3. 엔트리 포인트(app.js)에서 필요한 설정
+#### 3. 엔트리 포인트(app.js)에서 추가 설정을 합니다.
 
 ```javascript
 // app.js
@@ -129,8 +129,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: false }));
 ```
 
-이전까지 API 응답을 통해 문자열만 전달했다면 이번에는 비교적 대용량인 이미지를 전달해야 한다.  
-지금까지는 json과 urlencoded의 디폴트 값을 사용했지만 사진과 같이 일정량 이상의 크기를 지닌 데이터를 전송한다면 허용 범위를 확장해줘야 한다.
+이전까지 API 응답을 통해 문자열만 전달했다면 이번에는 비교적 대용량인 이미지를 전달해야 합니다.  
+그래서 지금까지는 전송에 필요한 json과 urlencoded의 디폴트 값을 사용했지만 사진과 같이 일정량 이상의 크기를 지닌 데이터를 전송한다면 허용 범위를 확장해줘야 합니다.
 
 ---
 
