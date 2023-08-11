@@ -39,13 +39,13 @@ export class AppController {
 ```
 
 앱 컨트롤러를 하나의 클래스로 정의해서 export한다.  
-constructor에 활용할 앱 서비스르 장착한다.  
+constructor에 활용할 앱 서비스를 장착한다.  
 데코레이터 함수로 API 메서드를 정의한다.
 
 ### 테스트 코드 생성
 
 jest라는 테스트 프레임워크를 활용하여 테스트를 한다.
-app.controller.spec.ts 파일에 테스트용 빌드가 짜여져 있음 (와 미쳤네...)
+app.controller.spec.ts 파일에 테스트용 빌드가 짜여져 있다.
 
 ### IoC와 DI
 
@@ -157,6 +157,7 @@ npm i lodash
 ### 기본 CRUD 틀 작성하기
 
 ```typescript
+// board.controller.ts
 import { Controller, Delete, Get, Post, Put } from '@nestjs/common';
 import { BoardService } from './board.service';
 
@@ -221,6 +222,9 @@ import { IsNumber, IsString } from 'class-validator';
 
 export class CreateArticleDto {
   @IsString()
+  readonly author: string;
+
+  @IsString()
   readonly title: string;
 
   @IsString()
@@ -282,6 +286,7 @@ export class DeleteArticleDto extends PickType(CreateArticleDto, ['password'] as
 이어서 컨트롤러에서 요청 시 body와 params와 같은 요소를 받아오는 코드를 작성합니다.
 
 ```typescript
+// board.controller.ts
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { BoardService } from './board.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -326,6 +331,7 @@ export class BoardController {
 현재 TypeORM을 적용하지 않고 단순히 배열에 데이터를 저장하고 불러온다는 개념으로 간단하게 구현해보자
 
 ```typescript
+// board.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -409,3 +415,358 @@ if (_.isNil(article)) {
 여기까지 DB없이 Nest.js로 간단한 게시글 CRUD 예시입니다.
 
 ---
+
+## TypeORM
+
+### What is TypeORM
+MySQL, MariaDB, PostgreSQL, MongoDB(experimental: 아직 실험단계임이 명시되어 있음) 등 여러 종류의 데이터베이스를 동일한 방식으로 다룰 수 있도록 돕는 도구를 ORM이라 한다. 거의 비슷하지만 조금씩 다른 SQL들은 쿼리문에도 조금씩에 차이가 있을 수 있는데 그런 부분에서의 걱정을 덜어준다. 
+
+[Documentation](https://typeorm.io/)  
+
+### TypeORM 기본 설치
+```zsh
+# 설치
+npm i @nestjs/typeorm typeorm mysql
+npm i @nestjs/config
+
+```
+
+```zsh
+# 설치 이슈 발생한다면 class-validator 설치 순서 체크
+npm uninstall class-validator
+npm i @nestjs/typeorm typeorm mysql
+npm i @nestjs/config
+npm i class-validator
+```
+
+### DB 연결을 위한 초기 설정
+
+먼저 데이터베이스 접속에 필요한 정보를 .env에 보관한다.  
+
+```zsh
+# .env
+DATABASE_HOST="localhost"
+DATABASE_PORT=3306
+DATABASE_USERNAME="DB 접속 아이디"
+DATABASE_PASSWORD="DB 접속 비밀번호"
+DATABASE_NAME="board" # DB 이름
+DATABASE_SYNCHRONIZE=true # 해당 부분은 배포 시 false로 변경
+```
+
+이후 root module에 DB사용을 위한 설정을 한다.  
+
+```typescript
+// app.module.ts
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
+import { BoardModule } from "./board/board.module";
+import { TypeOrmConfigService } from "./config/typeorm.config.service";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { Article } from "./board/article.entity";
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // config값 읽어오기
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useClass: TypeOrmConfigService, // DB 접속 관련 정보가 모인 곳
+      inject: [ConfigService],
+    }),
+    BoardModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+먼저 `config 폴더를 생성하여 그 안에 typeorm.config.service.ts 파일을 생성`한다. 해당 파일 안에 실제 DB가 참조해야할 정보가 담기도록 할 예정이다.  
+TypeOrmModule은 TypeORM 연결을 위해 필요한 셋팅으로 볼 수 있다. imports와 inject 설정을 통해 config 즉 .env를 활용하기 위한 설정을 하고, useClass에 실제 DB 연결을 위한 정보를 담는다.
+
+```typescript
+// config/typeorm.config.service.ts
+import { Injectable } from "@nestjs/common";
+import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from "@nestjs/typeorm";
+import { ConfigService } from "@nestjs/config";
+import { Article } from "src/board/article.entity";
+
+@Injectable()
+export class TypeOrmConfigService implements TypeOrmOptionsFactory {
+  constructor(private readonly configService: ConfigService) {}
+
+  createTypeOrmOptions(): TypeOrmModuleOptions {
+    return {
+      type: "mysql",
+      host: this.configService.get<string>("DATABASE_HOST"),
+      port: this.configService.get<number>("DATABASE_PORT"),
+      username: this.configService.get<string>("DATABASE_USERNAME"),
+      password: this.configService.get<string>("DATABASE_PASSWORD"),
+      database: this.configService.get<string>("DATABASE_NAME"),
+      entities: [__dirname + "/**/*.entity{.ts,.js}"],
+      synchronize: this.configService.get<boolean>("DATABASE_SYNCHRONIZE"),
+    };
+  }
+}
+```
+
+DB 연결에 필요한 정보를 createTypeOrmOptions 함수에 담아 리턴하는 것을 확인할 수 있다. 특히 .env에 기록한 DB 정보를 가져오도록 configService가 활용되고 있으며 초기에 .env 정보에 대한 타입도 지정하고 있다.  
+
+마지막으로 레포지토리 사용을 위해 board 모듈에 아래와 같이 코드를 추가해준다.
+
+```typescript
+// board.module.ts
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { Article } from "./article.entity";
+import { BoardController } from "./board.controller";
+import { BoardService } from "./board.service";
+
+@Module({
+  // 매우 중요: 서비스에서 사용할 리포지토리 사용을 imports에 명시!
+  imports: [TypeOrmModule.forFeature([Article])],
+  controllers: [BoardController],
+  providers: [BoardService],
+})
+export class BoardModule {}
+```
+
+
+### Entity 생성하기
+DB의 테이블과 맵핑되는 개체(Entity)를 뜻한다. sequelize에서 model과 비슷한 역할을 한다. 이는 실제 DB와 레포지토리(DB에 쿼리를 날리기 위한 파일) 간 소통을 위한 설정 정도로 생각하자.  
+
+```typescript
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
+
+@Entity({ schema: "board", name: "articles" })
+export class Article {
+  @PrimaryGeneratedColumn({ type: "int", name: "id" })
+  id: number;
+
+  @Column("varchar", { length: 10 })
+  author: string;
+
+  @Column("varchar", { length: 50 })
+  title: string;
+
+  @Column("varchar", { length: 1000 })
+  content: string;
+
+  @Column("varchar", { select: false })
+  password: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date | null;
+}
+```
+
+schema는 DB 이름을 적고, name은 테이블명으로 지정한다.  
+데코레이터로 쉽게 테이블의 각 컬럼을 정의하고 있음을 알 수 있고, 간단하게 validation 요소도 추가한 것을 확인할 수 있다. 특히 신기한 점은 password 컬럼이 select 쿼리로의 접근을 막고 있음을 볼 수 있다. 아무래도 select 쿼리의 결과로 비밀번호를 노출시킬 필요가 없기 때문이다.  
+
+### Repository 생성하기
+Nest는 일반 레포지토리와 커스텀 레포지토리 이렇게 두 부류가 존재한다. 우선 기본적인 CRUD API는 일반 레포지토리 적용으로 충분하므로 일반 레포지토리를 기준으로 설명한다.  
+
+일반 레포지토리(이하 레포지토리)는 따로 ts파일을 생성하여 코드를 관리하는 것이 아니라 연결할 service에 바로 코드를 작성할 수 있는데, 이는 TypeORM에서 기본적인 GET, POST, INSERT, DELETE와 같은 기본 메서드 구현을 위한 레포지토리를 이미 모듈로서 가지고 있기 때문이다. 그래서 이를 서비스에 injection만 하면 되는 방식으로 레포지토리를 생성 가능하다.  
+
+참고로 커스텀 레포지토리는 좀 더 세부적인, 구체적인 쿼리문을 날려야할 때(일반 레포지토리에는 없는 쿼리문) 사용되며 이는 말그대로 커스텀이므로 레포지토리 파일을 생성해서 직접 작성해야 한다.
+
+아래 코드를 살펴보자
+
+```typescript
+// board.service.ts
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import _ from 'lodash';
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Article } from "./article.entity";
+
+@Injectable()
+export class BoardService {
+  // constructor에 주목
+  constructor(
+    @InjectRepository(Article) private articleRepository: Repository<Article>
+  ) {}
+```
+
+BoardService 클래스의 constructor로 `InjectRepository` 데코레이터를 적용해서 Article Entity를 선택한 레포지토리를 `articleRepository`로 바로 생성하고 있다. 우리가 따로 레포지토리를 만든 적은 없지만 TypeORM에서 이미 모듈을 생성해 뒀기 때문이다.  
+
+이제 articleRepository를 기본적인 CRUD에서 어떻게 활용하는지 확인해보자.  
+
+```typescript
+async getArticles() {
+    return await this.articleRepository.find({
+      where: { deletedAt: null },
+      select: ["author", "title", "createdAt"],
+    });
+  }
+```
+
+게시글을 조회하는 레포지토리이다. constructor에서 생성한 articleRepository의 find 메서드를 적용하고 옵션으로 where 조건절과 attr(컬럼)을 선택적으로 가져오는 것을 확인할 수 있다. TypeORM에서 find는 기본적으로 배열 형태를 반환하며 즉 sequelize의 findAll과 같은 함수임을 기억하자.  
+또한 Nest의 Repository에서도 호출 결과가 Promise 객체가 반환된다. 그러므로 `조회`와 같이 결과물을 받아야 되므로 async과 await가 필수적으로 붙어야 한다.  
+
+```typescript
+async getArticleById(id: number) {
+    return await this.articleRepository.findOne({
+      where: { id, deletedAt: null },
+      select: ["author", "title", "content", "createdAt", "updatedAt"],
+    });
+  }
+```
+
+id를 기준으로 조회하는 레포지토리이다. find 메서드와 findOne 메서드의 차이로 사용법에 큰 차이가 없다.  
+
+```typescript
+createArticle(title: string, content: string, password: number) {
+    this.articleRepository.insert({
+      author,
+      title,
+      content,
+      // 나중에 암호화된 비밀번호를 저장하도록 하겠습니다.
+      password: password.toString(),
+    });
+  }
+
+```
+create는 `insert` 메서드로 적용되는 것을 확인할 수 있다. 입력받을 값을 오브젝트 형태로 전달하는 점은 동일하다. password의 경우 예시를 위해 적어뒀는데 `타입 변환이 필요한 상황이라면 .toString() 메서드를 붙이면 된다.`  
+여기서 주목할 점은 async와 await를 쓰지 않았다는 점이다. 사실 데이터 생성의 경우 리턴값이 없어도 되므로 await가 필수적이지는 않다. 게다가 async를 쓰지 않는다면 다른 async 요청들이 그 요청들이 서는 줄을 서지 않아도 된다. 이 점은 트래픽을 줄이는 것에 도움이 될 수 있다. 물론 게시글 생성이 조회만큼 활발하게 요청이 발생하는 쿼리는 아니지만 말이다.
+
+```typescript
+async deleteArticle(id: number, password: number) {
+    await this.checkPassword(id, password);
+    this.articleRepository.softDelete(id); // soft delete를 시켜주는 것이 핵심!
+  }
+
+  private async checkPassword(id: number, password: number) {
+    const article = await this.articleRepository.findOne({
+      where: { id, deletedAt: null },
+      select: ["password"],
+    });
+    if (_.isNil(article)) {
+      throw new NotFoundException(`Article not found. id: ${id}`);
+    }
+
+    if (article.password !== password.toString()) {
+      throw new UnauthorizedException(
+        `Article password is not correct. id: ${id}`
+      );
+    }
+  }
+```
+
+delete의 경우 게시글에 설정된 패스워드 조회가 우선적으로 필요하다. 위 코드에서는 패스워드 검증을 위한 로직을 checkPassword라는 헬퍼 함수로 따로 생성하여 관리하고 있음을 볼 수 있다. 만일 비밀번호 검증과 같이 자주 필요한 로직이 있다면 저렇게 헬퍼함수로 관리하는 것이 유지 보수에 안정적이다. 또한 비밀번호를 `조회` 해서 `대조`하는 로직이 보안 상 클래스 외부에서 접근이 불가해야 하므로 함수 앞에 `private`를 적용하고 있음을 볼 수 있다.
+
+### Controller의 수정
+
+Service에서는 Repository 사용으로 인해 async와 await를 사용하였고 해당 Service는 고스란히 Controller에 전달되므로 컨트롤러에서도 각 함수와 service 접근 함수에 async와 await를 붙여줘야 한다.
+
+### 외부 패키지 사용 (jwt)
+
+외부 라이브러리를 적용할 때는 항상 module.ts에 적용이 되어야 사용이 가능하다. jwt를 UserService, UserController에서 쓰인다고 가정한다면 user.module.ts의 imports를 통해 jwt가 import 되어야 할 것이다.  
+
+먼저 Nest에서 사용할 jwt 패키지를 설치한다.
+
+```zsh
+npm i @nestjs/jwt
+```
+
+이후 jwt 사용을 위한 module 세팅을 한다.  
+
+```typescript
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { JwtModule, JwtService } from "@nestjs/jwt";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { Article } from "src/board/article.entity";
+import { JwtConfigService } from "src/config/jwt.config.service";
+import { Repository } from "typeorm";
+import { User } from "./user.entity";
+import { UserService } from "./user.service";
+import { UserController } from "./user.controller";
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User]), // 이건 TypeORM 강의 시간에 배웠죠?
+    JwtModule.register({
+      secret: 'secret',
+      signOptions: { expiresIn: '3600s' }, // 토큰의 만료시간은 1시간
+    }),
+  ],
+  providers: [UserService],
+  exports: [UserService],
+  controllers: [UserController],
+})
+export class UserModule {}
+```
+
+위 코드와 같이 imports에 직관적으로 jwt 사용을 위한 등록이 가능하다. 하지만 예상한 바와 같이 jwt의 secret키가 저렇게 쉽게 노출되어서는 안되므로 이 또한 config 패키지를 활용하여 숨겨줄 필요가 있다.  
+
+잠시 config 사용 flow를 떠올려 보자면
+- xxx.config.service파일을 생성하여 module에 injection하는 형태를 취한다.
+- config.service 내부에서 .env의 변수를 읽어줄 수 있도록 조치한다.
+
+```typescript
+// config/jwt.config.service.ts
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtModuleOptions, JwtOptionsFactory } from "@nestjs/jwt";
+
+@Injectable()
+export class JwtConfigService implements JwtOptionsFactory {
+  constructor(private readonly configService: ConfigService) {}
+
+  createJwtOptions(): JwtModuleOptions {
+    return {
+      secret: this.configService.get<string>("JWT_SECRET"),
+      signOptions: { expiresIn: "3600s" },
+    };
+  }
+}
+```
+
+config.service.ts를 상세히 살펴보면
+- 옵션 설정을 위한 클래스 생성
+- 클래스의 implements 설정, constructor의 configService 설정
+- .get 메서드로 .env값에 접근(설정)
+
+이후 module 파일에서는 imports 시 아래와 같은 형태를 취한다.  
+
+```typescript
+// user.module.ts
+// ... 윗 줄 import 부분 생략
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useClass: JwtConfigService,
+      inject: [ConfigService],
+    }),
+  ],
+  providers: [UserService],
+  exports: [UserService],
+  controllers: [UserController],
+})
+export class UserModule {}
+```
+
+imports 내부에서 import, useClass, inject설정에 필요한 것들이 어떤 것들인지 인지해두자, 이 외 패키지를 추가해서 사용할 때도 위와 같은 방식을 취해야 할 것이다.
+
+
