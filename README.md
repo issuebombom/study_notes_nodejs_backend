@@ -14,10 +14,13 @@
 
 [자바스크립트 객체지향 프로그래밍](https://github.com/issuebombom/nodejs_study_alone/blob/main/study_alone_oop.md)
 
+[자바스크립트 비동기 함수 간단하게 이해하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/async_await_example.md)
+
 ## 기타
 
 [AWS 기본 서비스 간략하게 살펴보기(작성 중)](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_basic.md)  
 [AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)
+[AWS EC2의 Nginx로 라이브 스트리밍 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_nginx_live_streaming.md)
 
 [Express MVC 간략하게 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_mvc_pattern.md)  
 [Express JWT로 간단한 인증 기능 구축하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_jwt_module.md)  
