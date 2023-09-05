@@ -15,7 +15,8 @@
 
 [AWS 기본 서비스 간략하게 살펴보기(작성 중)](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_basic.md)  
 [AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)  
-[AWS EC2의 Nginx로 라이브 스트리밍 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_nginx_live_streaming.md)
+[AWS EC2의 Nginx로 라이브 스트리밍 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_nginx_live_streaming.md)  
+[AWS S3와 Cloudfront로 라이브 스트리밍 데이터 저장, 요청하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_s3_cloudfront_live_streaming.md)
 
 [Express MVC 간략하게 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_mvc_pattern.md)  
 [Express JWT로 간단한 인증 기능 구축하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_jwt_module.md)  
