@@ -26,9 +26,11 @@
 [Express Socket.io로 서버, 클라이언트 통신하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_socket.io.md)  
 [Express passport로 로그인 인증 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_auth_passport.md)
 
+[(작성중) 테스트 코드 작성법 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/test_code.md)
+
 [TypeScript 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_basic.md)  
 [Nest.js 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_basic.md)  
 [Nest.js 심화 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_advanced.md)  
-[Nest.js passport로 소셜 로그인 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_passport.md)   
+[Nest.js passport로 소셜 로그인 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_passport.md)
 
 [자료구조 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/data_structure_basic.md)
