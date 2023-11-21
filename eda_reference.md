@@ -80,6 +80,7 @@ AWS SNS에 어플리케이션 이벤트에서 발행한 이벤트가 적재된�
 > TRADE OFF
 
 ### 외부 이벤트
+
 <img width="650" alt="스크린샷 2023-11-15 오후 3 54 11" src="https://github.com/issuebombom/nodejs_study_alone/assets/79882498/c2525327-9a63-44f5-851e-23fcf588d27a">
 
 MSA에서 "로그인" 도메인이 아닌 타 도메인의 로직이 수행되어야할 수 있다. 이 경우 다른 시스템으로 이벤트를 전달해야 한다.  
@@ -95,3 +96,138 @@ MSA에서 "로그인" 도메인이 아닌 타 도메인의 로직이 수행되�
 - 내부 이벤트 발행을 위한 구독 계층과 더불어 "이벤트 발행 여부를 기록(DB)"하는 구독 계층을 생성한다.
 - 트랜잭션은 이벤트 기록 로직하고만 공유한다. 그러면 내부 이벤트 발행 구독계층이 이벤트 발행을 누락시켜도 DB를 통해 발행 유무를 확인해서 재발행하는 배치 처리가 가능하다.
 - DB에 기록할 때는 초기 이벤트 발행 시 published 컬럼을 false로 발행하고, 내부 이벤트 처리기 단에서 false를 true로 변경해주는 방식을 취한다.
+
+## 간단한 EDA 구현하기
+
+> 회원가입이 완료되면 이에 대한 이벤트를 발행하고, 이메일 서비스에서는 이를 확인하여 가입 인증 메일을 발송하는 구조를 구현해보자
+
+MSA 환경에서는 RabbitMQ나 Kafka와 같은 도구로 시스템 간 메시지를 발행, 구독할 수 있지만 여기서는 EDA에 대한 감을 익히기 위해 모놀리식 아키텍처에서 eventEmitter를 이용하여 EDA 느낌을 아래와 같이 구현해 보았다.
+
+### 1. 이벤트를 어떤 형식으로 발행할 것인가?
+
+이벤트 발행을 위한 작성 양식은 아래와 같이 고정한다. 또한 이벤트를 DB에 저장하여 이벤트 발행 유무 체크 및 이벤트를 기록한다.  
+이벤트 발행 양식은 누가(who), 어떤 이벤트를 발행했고(what), 전달할 페이로드는 무엇인지?, 전달 완료 유무에 대해 작성하도록 한다.
+
+```typescript
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+
+@Entity()
+export class Event {
+  @PrimaryGeneratedColumn()
+  id: string;
+
+  @Column()
+  who: string;
+
+  @Column()
+  what: string;
+
+  @Column({ type: 'simple-json', nullable: true, default: null })
+  payload: {};
+
+  @Column({ default: false })
+  published: boolean;
+
+  @Column({ nullable: true, default: null })
+  publishedAt: Date | null;
+
+  @CreateDateColumn()
+  createdAt: Date;
+}
+```
+
+### 2. 신규 회원 생성 후 이벤트 발행하기
+
+```typescript
+// users.controller.ts
+@Controller('api/users')
+export class UsersController {
+  constructor(
+    private readonly usersService: UsersService,
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
+    private readonly eventEmitter: EventEmitter2
+  ) {}
+
+  @Post()
+  // 인증받지 않은 유저 생성
+  async createUserWithoutVerification(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.createUserWithoutVerification({
+      createUserDto,
+    });
+
+    // 회원 생성 완료 후 인증 메일 전송을 위한 이벤트 발행
+    const event = new CommonEvent(user.id, 'user.created');
+    // create event record
+    const userCreatedEvent = await this.eventRepository.save(event);
+    this.eventEmitter.emit('user.created', userCreatedEvent); // publish
+
+    return { message: '회원 생성 완료, 이메일 인증 필요', statusCode: 200 };
+  }
+}
+```
+
+먼저 `CommonEvent`는 이벤트 발행을 위한 양식에 해당한다.
+
+```typescript
+// common.event.ts
+import { IEvent } from '@nestjs/cqrs';
+
+export class CommonEvent implements IEvent {
+  constructor(
+    readonly who: string,
+    readonly what: string,
+    readonly payload?: { [key: string]: any }
+  ) {}
+}
+```
+
+이벤트를 작성할 때는 기본적으로 누가 해당 이벤트를 발생시켰는지, 어떤 이벤트가 벌어졌는지 표기하도록 한다. 페이로드는 선택사항이다.  
+사실 페이로드를 전혀 사용하지 않는 것이 유저 도메인과 이메일 도메인 간에 느슨한 결합을 제대로 이뤘다고 할 수 있겠으나, 예외 상황을 고려하여 작성 항목에 추가했다.
+
+먼저 이벤트 저장소에 이벤트 레코드를 생성한다. 이 때 published가 false값으로 생성되며 이후 구독자가 비관심사를 처리한 뒤 true값으로 변경한다.
+
+> 위와 같이 이벤트 발행과 구독이 일대일 관계로 연결되어 있다면 발행 완료 표기를 위와 같이 하면 되겠지만 1대다의 경우 다른 방법을 써야할 것이다.
+
+emit을 통해 이벤트명을 'user.created'로 지정하여 DB에 생성한 이벤트 기록과 함께 발행한다. 이렇게하여 최종적으로 "이벤트 ID, 발행자, 발행이유" 이 세가지 정보를 전달한다.
+
+### 3. 이메일 도메인에서 이벤트 구독하기
+
+```typescript
+// email-events.handler.ts
+@Injectable()
+export class EmailEventsHandler {
+  constructor(
+    @InjectRepository(Event)
+    private readonly eventRepository: Repository<Event>,
+    private readonly emailService: EmailService
+  ) {}
+
+  @OnEvent('user.created')
+  async handleUserCreated(event: Event) {
+    // 이벤트 수신 완료 처리
+    const userCreatedEvent = await this.eventRepository.findOne({
+      where: { id: event.id },
+    });
+    this.eventRepository.save({ ...userCreatedEvent, ...{ published: true } });
+    // 인증 메일 발송
+    this.emailService.sendMemberJoinVerification(event);
+    // 이벤트 저장소에서 '인증 메일 발송' 이벤트 기록
+    const e = new CommonEvent(event.who, 'verifyEmail.sent');
+    this.eventRepository.save({
+      ...e,
+      ...{ published: true },
+    });
+  }
+}
+```
+
+@OnEvent 데코레이터를 통해 'user.created'라는 이벤트를 구독하도록 한다. MSA 환경에서는 두 도메인 사이에 Queue가 존재하겠지만 여기서는 생략했다.
+
+이메일 도메인에서는 구독한 이벤트를 받은 직후 DB에 생성된 해당 이벤트 기록에서 published를 true로 변경한다. 이로써 이메일 도메인으로 이벤트가 잘 발행되었음을 기록으로 확인할 수 있다.
+
+그리고나서 가입 유저를 대상으로 인증 메일을 발송한다.
+
+마지막으로 '인증 메일 발송' 이벤트를 기록한다. 해당 이벤트는 현재 후속 처리 로직이 없기 때문에 곧바로 published를 true로 설정한다. 나중에라도 이어지는 비관심사 처리가 추가된다면 여기서 또 다시 event를 emit하면 된다.
+
+> 위와 같은 방식을 통해 유저 생성은 인증 메일 발송에 직접적인 개입을 하지 않고서도 이를 수행하게 되었다. 단지 유저 생성 이벤트가 발생했음을 이메일 도메인에게 알려준게 전부이기 때문이다.
