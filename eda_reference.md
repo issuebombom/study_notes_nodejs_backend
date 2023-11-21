@@ -209,14 +209,17 @@ export class EmailEventsHandler {
     const userCreatedEvent = await this.eventRepository.findOne({
       where: { id: event.id },
     });
-    this.eventRepository.save({ ...userCreatedEvent, ...{ published: true } });
+    this.eventRepository.save({
+      ...userCreatedEvent,
+      ...{ published: true, publishedAt: new Date() },
+    });
     // 인증 메일 발송
     this.emailService.sendMemberJoinVerification(event);
     // 이벤트 저장소에서 '인증 메일 발송' 이벤트 기록
     const e = new CommonEvent(event.who, 'verifyEmail.sent');
     this.eventRepository.save({
       ...e,
-      ...{ published: true },
+      ...{ published: true, publishedAt: new Date() },
     });
   }
 }
