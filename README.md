@@ -9,7 +9,7 @@
 [자바스크립트 Node.js 기본기](https://github.com/issuebombom/nodejs_study_alone/blob/main/study_alone_nodejs.md)  
 [자바스크립트 Express 기본기](https://github.com/issuebombom/nodejs_study_alone/blob/main/study_alone_express.md)  
 [자바스크립트 객체지향 프로그래밍](https://github.com/issuebombom/nodejs_study_alone/blob/main/study_alone_oop.md)  
-[자바스크립트 비동기 함수 간단하게 이해하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/async_await_example.md)  
+[자바스크립트 비동기 함수 간단하게 이해하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/async_await_example.md)
 
 [Express MVC 간략하게 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_mvc_pattern.md)  
 [Express JWT로 간단한 인증 기능 구축하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/express_jwt_module.md)  
@@ -25,6 +25,7 @@
 [Nest.js passport로 소셜 로그인 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_passport.md)
 
 ## 기타
+
 [AWS 기본 서비스 간략하게 살펴보기(작성 중)](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_basic.md)  
 [AWS EC2에 mongoDB 데이터베이스 생성하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_mongodb_setup.md)  
 [AWS EC2의 Nginx로 라이브 스트리밍 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/aws_nginx_live_streaming.md)  
@@ -32,5 +33,6 @@
 
 [Nginx에 대해 간단히 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/nginx_basic.md)  
 [자료구조 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/data_structure_basic.md)  
+[마이크로 서비스 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/micro_service_basic.md)  
 [이벤트 기반 아키텍처 레퍼런스 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/eda_reference.md)  
 [(작성중) 테스트 코드 작성법 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/test_code.md)
