@@ -22,7 +22,8 @@
 [TypeScript 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_basic.md)  
 [Nest.js 기본 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_basic.md)  
 [Nest.js 심화 살펴보기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_advanced.md)  
-[Nest.js passport로 소셜 로그인 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_passport.md)
+[Nest.js passport로 소셜 로그인 구현하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_passport.md)  
+[Nest.js에서 외부 API 연동하기](https://github.com/issuebombom/nodejs_study_alone/blob/main/typescript_nestjs_external_api.md)  
 
 ## 기타
 
