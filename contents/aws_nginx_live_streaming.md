@@ -202,14 +202,15 @@ OBS 스트리밍이 정상적으로 진행 중이라면 hls 전용 플레이어�
 아무래도 스트림키를 클라이언트에게 직접 제시하는 방법을 모색해야할 것 같다.  
 또한 방송 시작 시 node 서버가 눈치채고 hls 플레이어를 실행할 수 있도록 하는 로직이 필요할 것 같다. 
 
-참조 링크
-https://github.com/arut/nginx-rtmp-module/wiki
-https://github.com/arut/nginx-rtmp-module/wiki/Directives#notify
-https://realizetoday.tistory.com/entry/Live-Streaming-Server-%EA%B5%AC%EC%B6%95-5-Nginx-rtmp-module-%EC%84%A4%EC%B9%98-rtmp-to-hls
-https://www.digitalocean.com/community/tutorials/how-to-set-up-a-video-streaming-server-using-nginx-rtmp-on-ubuntu-20-04
-https://www.hostwinds.kr/tutorials/live-streaming-from-a-vps-with-nginx-rtmp
-https://qteveryday.tistory.com/371
-https://qteveryday.tistory.com/372
-https://3jini.tistory.com/245
-https://3jini.tistory.com/246
-https://webdir.tistory.com/206
+참조 링크  
+https://github.com/arut/nginx-rtmp-module/wiki  
+https://github.com/arut/nginx-rtmp-module/wiki/Directives#notify  
+https://realizetoday.tistory.com/entry/Live-Streaming-Server-%EA%B5%AC%EC%B6%95-5-Nginx-rtmp-module-%EC%84%A4%EC%B9%98-rtmp-to-hls  
+https://www.digitalocean.com/community/tutorials/how-to-set-up-a-video-streaming-server-using-nginx-rtmp-on-ubuntu-20-04  
+https://www.hostwinds.kr/tutorials/live-streaming-from-a-vps-with-nginx-rtmp  
+https://qteveryday.tistory.com/371  
+https://qteveryday.tistory.com/372  
+https://3jini.tistory.com/245  
+https://3jini.tistory.com/246  
+https://webdir.tistory.com/206  
+  

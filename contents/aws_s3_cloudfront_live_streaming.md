@@ -56,7 +56,7 @@ Logic Pro와 같은 음악 제작 프로그램에서도 이와 같은 단위가 
 
 ## chunk_size에 대해서
 
-![chunk_size 설명 이미지 삽입](./img/chunk_exam.png)
+![chunk_size 설명 이미지 삽입](/img/chunk_exam.png)
 
 위 글은 nginx용 rtmp프로토콜 송수신을 지원하는 github wiki에서 가져온 정보인데 위 설명과 같이 해당 값이 상대적으로 작아질수록 CPU의 부담이 높아진다. 왜냐하면 낮은 데이터량이 축적된다면 CPU가 자주 일해야 하고, 높은 데이터량이 축적된다면 상대적으로 덜 움직여도 되기 때문이다. 이러한 점에는 장단점이 있는데 그것을 바로 `Latency`와 연관이 있다.
 
@@ -208,11 +208,11 @@ S3와 cloudfront를 연결한다면 아래 항목에 집중해야 한다.
 
 이를 해결하는 방법은 의외로 간단했다. 바로 /.m3u8 파일만 항상 오리진을 참조하도록 하고 나머지 ts 파일은 캐시를 참조하도록 설정하는 것이었다.
 
-![캐시 정책 화면](./img/cloudfront_policy_cache_1.png)
+![캐시 정책 화면](/img/cloudfront_policy_cache_1.png)
 
 위 사진에서 보는 것과 같이 내가 생성한 cloudfront의 동작 탭에서 m3u8에 `Managed-CachingDisabled` 정책을 적용하여 캐싱 사용을 금지한 것을 볼 수 있다. 그 다음 우선 순위로 나머지 파일은 캐싱하도록(Managed-Elemental-MediaPackage) 한다. 오른편에 우선순위 번호에 따라 순차적으로 정책이 수행된다는 것을 기억하자
 
-![캐시 정책 종류](./img/cloudfront_policy_cache_2.png)
+![캐시 정책 종류](/img/cloudfront_policy_cache_2.png)
 
 이처럼 기본적으로 추천하는 정책 종류가 나열되어 있다. 처음에는 recommended가 붙은 `CachingOptimized`정책을 선택했더니 ts 파일 캐시가 바로바로 변경되지 않았고, 이를 `Elemental-MediaPackage`로 정책을 변경했더니 매 링크 접속 시 캐시가 금방금방 잘 최신화 되는 것을 확인할 수 있었다.
 

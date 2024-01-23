@@ -22,7 +22,7 @@
 [JWT 공식 사이트](https://jwt.io/)
 
 ### JWT 인코딩과 디코딩
-![JWT-example](./img/JWT_exam.png)
+![JWT-example](/img/JWT_exam.png)
 위 사진에서 암호화 되어있는 토큰을 서버에서 생성하여 클라이언트에 보내준다. 이 토큰은 `HEADER`, `PAYLOAD`, `VERIFY SIGNATURE`의 조합으로 생성된다.  
 JWT는 색깔로 구분된 것처럼 총 세 단계의 `세그먼트`로 분류가 된다.  
 > `HEADER`: 해당 토큰에 적용된 해싱(Hashing) 알고리즘과 데이터 타입과 같은 메타데이터에 해당  
@@ -73,7 +73,7 @@ app.listen(PORT, () => {
 
 > 💡 `Tip`  
 > `postman`이라는 앱을 설치하면 html 없이 request를 보낼 수 있어 response 결과를 바로 확인해 볼 수 있다. [사이트 확인](https://www.postman.com/)
-![postman-example](./img/postman_exam.png)
+![postman-example](/img/postman_exam.png)
 
 ### 클라이언트에서 토큰으로 요청하기
 우선 테스트를 위해 토큰 유효성이 검증되었을 경우 출력할 임시 데이터와 API를 준비합니다.
@@ -147,7 +147,7 @@ function authMiddleware(req, res, next) {
 - 서버에서 리프레시 토큰이 검증되면 새로운 엑세스 토큰을 재발행하여 클라이언트에 함께 전달한다.
 
 > 📌 Authorization Flow  
-> ![auth_flow_example](./img/auth_flow_exam.png)
+> ![auth_flow_example](/img/auth_flow_exam.png)
 
 ### 로그인 시 Access, Refresh 토큰 생성 API 
 ```javascript

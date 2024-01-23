@@ -563,8 +563,8 @@ services:
 ### 결과
 포스트맨으로 main-server(nestjs) 엔드포인트로 링크를 POST하면 이를 받아 producer에서 메시지를 브로커에 보낸다.
 
-![kafka_container_test_1](./img/kafka_container_test_1.png)
+![kafka_container_test_1](../img/kafka_container_test_1.png)
 
 최초 전송 시 카프카에서 버전과 관련된 WARN을 띄우고 있다. 이후 extractor-server(python)에서 즉각적으로 브로커에 담긴 메시지를 가져와 해당 유튜브 영상 정보를 출력하고 있다.
 
-![kafka_container_test_2](./img/kafka_container_test_2.png)
+![kafka_container_test_2](../img/kafka_container_test_2.png)
