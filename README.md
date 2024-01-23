@@ -1,6 +1,6 @@
-# 📝 nodejs_study_alone
+# 📝 study notes
 
-> Node.js 백엔드를 학습하는 과정에서 정리한 내용을 보관합니다.
+> Node.js기반 백엔드를 학습하는 과정에서 정리한 내용을 보관합니다.
 
 ## Javascript
 
