@@ -1,5 +1,4 @@
-# Redis 정리(작성 중)
-
+# Redis 정리
 ## Redis 캐시로 사용하기
 `Cache`란?)
 
@@ -132,6 +131,53 @@
 - RDB: 어느정도의 데이터 유실이 허용될 경우 사용, SAVE 100 1로 설정하면 100초 간 1회 이상의 key변경이 발생할 경우에 저장한다. 잦은 저장은 성능에 영향을 줄 수 있으므로 적절한 값 설정이 필요하다.
 - AOF: 장애 직전까지의 데이터 보장이 필요할 경우 사용, APPENDFSYNC값이 디폴트(everysec) 설정된 경우 최대 1초 사이의 데이터가 유실될 수 있음
 
+### Tip
+- key 조회 시 keys * 사용 금지 -> scan 0 사용할 것
+  - keys의 경우 모든 key를 메모리에 올리려 하므로 프로세스가 길어져 블로킹이 발생할 수 있다.
+  - scan의 경우 cursor라는 개념을 통해 부분적으로 key를 로딩하며 이 과정을 재귀 형태로 탐색하여 모든 키를 가져올 수 있다. 그러므로 프로세스를 분산할 수 있어 블로킹을 방지할 수 있다.
+
+        redis > scan 0 MATCH key* COUNT 10
+        1) "13"
+        2)  1) "key1"
+            2) "key14"
+            3) "key4"
+            4) "key7"
+                .
+                .
+                .
+ 
+        redis > scan 13 MATCH key* COUNT 10
+            1) "0"
+            2)  1) "key2"
+                2) "key11"
+                3) "key5"
+                4) "key8"
+    
+
+    cursor 0을 시작으로 지정된 COUNT 개수만큼 조건에 맞게 탐색을 시작한다. 그러면 다음 순서에 해당하는 cursor인 "13"이 출력되었는데 이를 다음 scan의 cursor로 지정하면 이어서 탐색이 가능하다. 최종적으로 cursor값을 "0"을 반환했을 경우 전체 순회(full iteration)했다고 말한다. 이처럼 각 scan 커멘드가 각각의 프로세스가 되므로 그 틈 사이에 다른 커멘드가 실행될 여지가 생겨 블로킹이 방지되는 것이다.
+
+    또한 보시다시피 scan 커멘드는 CLI가 아닌 스크립트에서 재귀함수 형태로 사용하는게 편리해 보인다.
+
+- key 삭제 시 del 보다는 unlink 사용
+  - del은 삭제 프로세스가 생성되므로 양이 많을수록 블로킹이 발생한다. unlink를 사용하면 백그라운드에서 삭제되므로 블로킹을 방지한다.
+  - unlink는 해당 key를 삭제하여 key와 연결되어있던 메모리 공간이 붕~ 떠버리게 만드는 것이다. 더이상 해당 메모리 공간에 들어갈 루트가 없으므로 Garbage Collector가 이를 발견하면 메모리 해제 작업을 하는 비동기 방식으로 처리된다. 문제는 발견되기 전까지는 해당 메모리 공간이 유지되므로 Garbage Collector가 "언제 가져가느냐"가 중요한 관건이다. 논리적인 메모리 사용량과 물리적인 메모리 사용량이 일시적으로 격차가 발생하여 문제가 될 수 있기 때문이다. 그러므로 unlink를 통한 실제 메모리 공간 확보에는 비동기 처리 시간을 고려할 필요가 있다.
+ 
+- STOP-WRITES-ON-BGSAVE-ERROR = NO
+  - 해당 기능은 RDB 파일 저장에 실패하면 write기능을 차단함을 의미한다. 디폴트로 YES가 설정되어 있다.
+  - 백업의 누락을 방지하기 위한 의도가 담겨있지만 오히려 write 차단으로 발생하는 서비스 장애가 더 치명적이므로 NO로 설정하고, RDB 저장 모니터링 환경을 갖추는 것이 좋다.
+
+- MAXMEMORY-POLICY = ALLKEYS-LRU
+  - redis의 메모리가 가득찼을 때 따를 정책을 선택한다.
+  - 디폴트는 noeviction로 더이상 새로운 키를 저장하지 않는 정책이다. 이 또한 치명적인 서비스 장애로 이어질 수 있다.
+  - allkeys-lru는 오랫동안 사용되지 않은 순으로 키를 삭제하는 정책이다. 메모리 용량에 따라 자주 사용되는 편에 속하던 key가 삭제되어 잦은 Cache Miss가 발생할 수도 있겠지만 이는 scale-up하면 해결될 문제이며 적어도 key가 생성되지 않는 불상사는 막을 수 있다.
+  - 위 정책에 앞서 서비스 환경에 적합한 Expire Time을 설정하는 것이 중요하다.
+
+- Cache Stampede
+  - TTL 설정으로 key가 막 Expired 된 시점부터 redis에 key가 다시 생성되기 까지의 기간 사이에 여러 Application이 Expired된 key에 접근하려 한다면 그 여러 App이 모두 DB에 read를 시도하는 Duplicate Read가 발생하고, 이어서 새로 redis에 캐싱하려는 Duplicate Write까지 발생하게 된다. 위 과정은 불필요한 반복작업에 해당하며 성능 저하에 영향을 미치면서 장애로 이어질 수 있다. 주로 이벤트 오픈과 같은 합법적 DDos 공격을 받는 시점에 Expired 된 경우를 상상해보면 끔찍하다. 이를 방지하기 위해 Expired 되는 시점을 잘 고려해야 하며 차라리 DDos가 예상되는 시점 직전에 새로 key를 write하는게 안전하겠다.
+
+- 메모리 관리
+  - unlink에서 언급한 바와 같이 논리적 메모리 사용량과 물리적 메모리 사용량에 차이가 발생할 수 있다. 주로 Expire Time나 특정 이유로 인해 한꺼번에 많은 양의 key가 unlink된다면 Garbage Collector는 일이 바빠진다. 그러므로 물리적 메모리 공간 확보에 딜레이가 발생할 수 있다.(단편화) 그러므로 모니터링 시 used_memory_rss를 참조해야 한다. 또한 이러한 문제를 해결하기 위한 방법으로 공식문서에서는 active-defrag값을 일시적으로 yes로 설정할 것을 제안한다. 이는 메모리 최적화 프로세스를 백그라운드에서 실행함을 의미하는데 이또한 CPU자원을 차지하기 때문에 redis의 성능을 고려했을 때 단편화와 같은 특수한 상황에서 일시적으로만 적용할 것을 권장하는 것이다.
+
 ---
 
 ## Install Redis on macOS
@@ -150,7 +196,7 @@ brew services stop redis
 redis-cli
 ```
 
-## Redis Cloud env 설정
+### Redis Cloud env 설정
 [블로그 참조](https://inpa.tistory.com/entry/REDIS-%F0%9F%93%9A-Redis%EB%A5%BC-%ED%81%B4%EB%9D%BC%EC%9A%B0%EB%93%9C%EB%A1%9C-%EC%82%AC%EC%9A%A9%ED%95%98%EC%9E%90-Redislabs)
 
 AWS의 elastic cache를 통해 Redis를 사용할 수 있음. 하지만 요금 발생  
@@ -159,21 +205,12 @@ Redis 공식 사이트에서 30mb 한정 무료 사용이 가능함
 [사이트 참조](https://redis.com/redis-enterprise-cloud/overview/)  
 
 ## 저장
-메모리 기반이므로 기본적으로 서버가 종료되면 데이터는 날아간다. 이를 보완하기 위해 스냅샷 기능과 AOF(Append-Only File) 기능이 있다. 후자는 logging에 해당하며 이를 기반으로 서버 복원이 가능하다고 한다.  
+메모리 기반이므로 기본적으로 서버가 종료되면 데이터는 날아간다. 이를 보완하기 위해 RDB과 AOF(Append-Only File) 기능이 있다. 후자는 logging에 해당하며 이를 기반으로 서버 복원이 가능하다.
 
 ## HOST 및 기타 설정 변경
 vim /usr/local/etc/redis.conf
 
 
-## Node.js 환경에서 redis 사용
-
-```zsh
-# v3는 콜백 기반, v4는 프로미스 기반
-npm i redis 
-```
-
-
-
-## 참조
+#### 참조
 [참조 영상](https://www.youtube.com/watch?v=92NizoBL4uA)
 
