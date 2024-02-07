@@ -87,6 +87,51 @@
         
   위 예시에서는 해당 날짜에 크롤링한 IP의 개수가 몇 개인지 카운팅하는 예시이다.
 
+#### Messaging
+- `List`: Blocking 기능을 이용해 Event Queue로 사용이 가능하다. BRPOP과 LPUSH/RPUSH를 사용하지만 LPUSHX / RPUSHX를 사용하면 key가 존재할 때만 데이터를 push하게 할 수 있다.  
+
+      client A
+      redis > BRPOP myqueue 0
+
+      client B
+      redis > LPUSH myqueue "hi
+
+      client A
+      1) "myqueue"
+      2) "hi"
+      (26.54s)
+
+  client A가 BRPOP을 통해 myqueue key에 대한 리스닝을 실행하면 해당 key에 push된 데이터를 즉시 가져오는 메시징이 가능하다.  
+
+  또한 LPUSHX / RPUSHX를 사용하면 key가 존재할 때만 데이터를 push한다. 예를 들어 트위터나 인스타그램과 같이 유저별 Timeline이 존재하는 서비스에서 각 유저의 Timeline:{id}에 팔로우한 유저의 피드를 list에 미리 캐싱해 둘 수 있을 것이다. 이 때 서비스를 자주 사용하지 않는 유저는 Expire Time으로 인해 Timeline:{id}이 Redis의 key로 존재하지 않게 하여 관련 피드를 미리 push해두는 것을 방지할 수 있다. 이렇게 하면 저장 공간을 효율적으로 다룰 수 있다.
+
+- `Stream`: '*'를 사용하여 데이터 저장 시간을 ID로 설정할 수 있어 로그를 저장하기 적절하다. append-only에 해당하고, 시간 범위로 검색, 신규 데이터 following, consumer group별 데이터 수신도 가능하다.  
+
+      redis > XADD mystream * sensor-id 1234 temp 19.8
+      "17252343562-0"
+
+  '*'을 지정하면 mstime-sequenceNumber 형태로 저장된다.
+
+## Redis 운영
+
+### 데이터 영구 저장하기
+- Redis를 캐시 이외의 용도로 사용한다면 적절한 데이터 백업이 필요할 것이다.
+  
+#### AOF 방식
+- Append Only File의 약자로, 지금까지 입력된 커맨드를 그대로 저장하는 방식이다.
+- 신규 key:value가 저장된 것부터 해당 key값이 변경, 제거되는 모든 과정을 담는다.
+- RDB보다 대체적으로 용량이 커지므로 압축 또는 재작성의 과정이 추가적으로 필요하다.
+- redis.conf의 auto-aof-rewrite-percentage옵션을 통해 파일 크기를 기준으로 자동 저장하거나 BGREWRITEAOF 커멘드로 수동 저장
+
+#### RDB 방식
+- Snapshot 방식으로 파일을 저장한다.
+- AOF와 달리 최종 key:value만 기록하며 변천사는 기록하지 않는다.
+- redis.conf의 SAVE옵션을 통해 시간 기준으로 자동 저장하거나 BGSAVE 커멘드로 수동 저장
+
+### 선택 기준
+- RDB: 어느정도의 데이터 유실이 허용될 경우 사용, SAVE 100 1로 설정하면 100초 간 1회 이상의 key변경이 발생할 경우에 저장한다. 잦은 저장은 성능에 영향을 줄 수 있으므로 적절한 값 설정이 필요하다.
+- AOF: 장애 직전까지의 데이터 보장이 필요할 경우 사용, APPENDFSYNC값이 디폴트(everysec) 설정된 경우 최대 1초 사이의 데이터가 유실될 수 있음
+
 ---
 
 ## Install Redis on macOS
